@@ -39,6 +39,46 @@ final class WatchlistUseCaseTests: XCTestCase {
         XCTAssertEqual(snapshot, original)
     }
 
+    func testRemoveAndReorderSaveFailuresLeavePersistedSnapshotUnchanged() async throws {
+        let original = [item("a", order: 0), item("b", order: 1)]
+
+        let removeUseCase = WatchlistUseCase(
+            store: MemoryWatchlistStore(initial: original, failSaves: true),
+            maximumCount: 50
+        )
+        _ = try await removeUseCase.bootstrap()
+        await XCTAssertThrowsErrorAsync(try await removeUseCase.remove(id: original[0].id)) { _ in }
+        let removeSnapshot = await removeUseCase.snapshot()
+        XCTAssertEqual(removeSnapshot, original)
+
+        let reorderUseCase = WatchlistUseCase(
+            store: MemoryWatchlistStore(initial: original, failSaves: true),
+            maximumCount: 50
+        )
+        _ = try await reorderUseCase.bootstrap()
+        await XCTAssertThrowsErrorAsync(
+            try await reorderUseCase.reorder(assetIDs: original.reversed().map(\.asset.assetID))
+        ) { _ in }
+        let reorderSnapshot = await reorderUseCase.snapshot()
+        XCTAssertEqual(reorderSnapshot, original)
+    }
+
+    func testRestoreSaveFailureKeepsItemsRemoved() async throws {
+        let original = [item("a", order: 0), item("b", order: 1)]
+        let store = MemoryWatchlistStore(initial: original)
+        let useCase = WatchlistUseCase(store: store, maximumCount: 50)
+        _ = try await useCase.bootstrap()
+        let removed = try await useCase.remove(id: original[1].id)
+        await store.failNextSave()
+
+        await XCTAssertThrowsErrorAsync(
+            try await useCase.restore([RemovedWatchlistEntry(item: removed.item, index: removed.index)])
+        ) { _ in }
+
+        let snapshot = await useCase.snapshot()
+        XCTAssertEqual(snapshot.map(\.asset.assetID.rawValue), ["a"])
+    }
+
     func testReorderNormalizesSortOrderAndPersistsOnce() async throws {
         let initial = [item("a", order: 0), item("b", order: 1), item("c", order: 2)]
         let store = MemoryWatchlistStore(initial: initial)
@@ -90,6 +130,7 @@ final class WatchlistUseCaseTests: XCTestCase {
 private actor MemoryWatchlistStore: WatchlistStoring {
     private let initial: [WatchlistItem]
     private let failSaves: Bool
+    private var shouldFailNextSave = false
     private(set) var savedSnapshots: [[WatchlistItem]] = []
 
     init(initial: [WatchlistItem] = [], failSaves: Bool = false) {
@@ -100,7 +141,14 @@ private actor MemoryWatchlistStore: WatchlistStoring {
     func load() async throws -> [WatchlistItem] { initial }
 
     func save(_ items: [WatchlistItem]) async throws {
-        if failSaves { throw CocoaError(.fileWriteUnknown) }
+        if failSaves || shouldFailNextSave {
+            shouldFailNextSave = false
+            throw CocoaError(.fileWriteUnknown)
+        }
         savedSnapshots.append(items)
+    }
+
+    func failNextSave() {
+        shouldFailNextSave = true
     }
 }

@@ -27,11 +27,13 @@ final class PanelViewModel {
     private let networkState: any NetworkStateProviding
     private let classifier: any StockTokenClassifying
     private let configuration: AppConfiguration
+    private let nowProvider: @Sendable () -> Date
     private let terminationHandler: @MainActor @Sendable () -> Void
 
     private var openTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
+    private var refreshTaskToken: UUID?
     private var validationTask: Task<Void, Never>?
     private var timelineTask: Task<Void, Never>?
     private var removalFinalizeTask: Task<Void, Never>?
@@ -82,6 +84,7 @@ final class PanelViewModel {
         networkState: any NetworkStateProviding,
         classifier: any StockTokenClassifying,
         configuration: AppConfiguration = .v1,
+        nowProvider: @escaping @Sendable () -> Date = Date.init,
         terminationHandler: @escaping @MainActor @Sendable () -> Void = {
             NSApplication.shared.terminate(nil)
         }
@@ -95,11 +98,17 @@ final class PanelViewModel {
         self.networkState = networkState
         self.classifier = classifier
         self.configuration = configuration
+        self.nowProvider = nowProvider
         self.terminationHandler = terminationHandler
+        self.now = nowProvider()
         if !classifier.isAvailable { statusSelector.activate(.classificationUnavailable) }
     }
 
-    var canSearch: Bool { configuredKeySuffix != nil && configuredKeyIsValid }
+    private var hasUsableConfiguredKey: Bool { configuredKeySuffix != nil && configuredKeyIsValid }
+
+    var canSearch: Bool {
+        hasUsableConfiguredKey && !(nextAllowedRequestAt.map { $0 > now } ?? false)
+    }
 
     var canManualRefresh: Bool {
         !items.isEmpty && configuredKeySuffix != nil && configuredKeyIsValid && !isRefreshing && manualRefreshRemaining == 0
@@ -157,7 +166,10 @@ final class PanelViewModel {
         guard isVisible != isPanelOpen else { return }
         isPanelOpen = isVisible
         if isVisible {
-            now = Date()
+            updatePresentationTime(nowProvider())
+            if !isBootstrapping, configuredKeySuffix == nil, items.isEmpty {
+                mode = .settings
+            }
             scheduleOpenRefresh()
             startTimeline()
         } else {
@@ -179,7 +191,7 @@ final class PanelViewModel {
             return
         }
         mode = .search
-        guard canSearch else {
+        guard hasUsableConfiguredKey else {
             localMessage = configuredKeySuffix == nil
                 ? String(localized: "请先配置 API Key")
                 : String(localized: "API Key 无效")
@@ -199,7 +211,7 @@ final class PanelViewModel {
         localMessage = nil
         searchResults = []
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 2, canSearch else { return }
+        guard trimmed.count >= 2, hasUsableConfiguredKey else { return }
         if let deadline = nextAllowedRequestAt, deadline > now {
             localMessage = String(localized: "请求受限，请稍后再试")
             return
@@ -217,8 +229,18 @@ final class PanelViewModel {
                 let rawResults = try await self.searcher.search(query: query)
                 try Task.checkCancellation()
                 guard generation == self.searchGeneration else { return }
-                self.searchResults = rawResults.map(self.classified)
-                    .sorted { ($0.marketCapRank ?? .max) < ($1.marketCapRank ?? .max) }
+                self.searchResults = rawResults.enumerated()
+                    .map { (index: $0.offset, result: self.classified($0.element)) }
+                    .sorted { lhs, rhs in
+                        let lhsExact = lhs.result.asset.symbol.caseInsensitiveCompare(query) == .orderedSame
+                        let rhsExact = rhs.result.asset.symbol.caseInsensitiveCompare(query) == .orderedSame
+                        if lhsExact != rhsExact { return lhsExact }
+                        let lhsRank = lhs.result.marketCapRank ?? .max
+                        let rhsRank = rhs.result.marketCapRank ?? .max
+                        if lhsRank != rhsRank { return lhsRank < rhsRank }
+                        return lhs.index < rhs.index
+                    }
+                    .map(\.result)
                 self.isSearching = false
                 self.statusSelector.resolveNetworkFailures()
             } catch is CancellationError {
@@ -247,9 +269,7 @@ final class PanelViewModel {
                 _ = try await watchlist.add(asset: result.asset)
                 items = await watchlist.snapshot()
                 statusSelector.resolve(.persistenceFailure)
-                refreshTask = Task { [weak self] in
-                    await self?.refresh(ids: [result.asset.assetID], isBulk: false)
-                }
+                scheduleAddPrice(for: result.asset.assetID)
             }
             query = ""
             searchResults = []
@@ -375,11 +395,13 @@ final class PanelViewModel {
 
     func manualRefresh() {
         guard canManualRefresh else { return }
-        refreshTask = Task { [weak self] in await self?.refreshAll() }
+        openTask?.cancel()
+        launchRefreshTask(ids: items.map(\.asset.assetID), isBulk: true)
     }
 
     func showSettings() {
         searchTask?.cancel()
+        isSearching = false
         query = ""
         searchResults = []
         localMessage = nil
@@ -392,7 +414,7 @@ final class PanelViewModel {
         isValidatingKey = false
         isCandidateKeyRevealed = false
         mode = .watchlist
-        now = Date()
+        updatePresentationTime(nowProvider())
     }
 
     func beginValidateAndSaveKey() {
@@ -410,6 +432,7 @@ final class PanelViewModel {
         localMessage = nil
         do {
             try await keyValidator.validate(candidateKey: candidate)
+            try Task.checkCancellation()
             try apiKeyStore.saveDemoKey(candidate)
             await networkState.resetNetworkState()
             nextAllowedRequestAt = nil
@@ -422,9 +445,14 @@ final class PanelViewModel {
             statusSelector.resolve(.missingKey)
             statusSelector.resolveNetworkFailures()
             if !items.isEmpty {
-                refreshTask?.cancel()
-                refreshTask = Task { [weak self] in await self?.refreshAll() }
+                openTask?.cancel()
+                pendingAddAssetIDs.removeAll()
+                launchRefreshTask(ids: items.map(\.asset.assetID), isBulk: true, cancelExisting: true)
             }
+        } catch is CancellationError {
+            isValidatingKey = false
+        } catch let error as NetworkError where error == .cancelled {
+            isValidatingKey = false
         } catch {
             isValidatingKey = false
             nextAllowedRequestAt = await networkState.nextAllowedRequestAt
@@ -455,7 +483,7 @@ final class PanelViewModel {
         shutdownTask = Task { [weak self] in
             guard let self else { return }
             let clock = ContinuousClock()
-            let deadline = clock.now.advanced(by: .seconds(2))
+            let deadline = clock.now.advanced(by: self.configuration.shutdownDrainTimeout)
             while self.activeLocalMutationCount > 0, clock.now < deadline {
                 do { try await clock.sleep(for: .milliseconds(25)) } catch { break }
             }
@@ -471,6 +499,14 @@ final class PanelViewModel {
         now.timeIntervalSince(quote.fetchedAt) > 300
     }
 
+    func updatePresentationTime(_ date: Date) {
+        now = date
+        if let deadline = nextAllowedRequestAt, deadline <= now {
+            nextAllowedRequestAt = nil
+            statusSelector.resolve(.rateLimited)
+        }
+    }
+
     private func scheduleOpenRefresh() {
         openTask?.cancel()
         guard !isBootstrapping else { return }
@@ -479,14 +515,9 @@ final class PanelViewModel {
                 guard let self else { return }
                 try await Task.sleep(for: self.configuration.openRefreshDebounce)
                 guard self.isPanelOpen else { return }
-                await self.refreshAll()
+                self.launchRefreshTask(ids: self.items.map(\.asset.assetID), isBulk: true)
             } catch {}
         }
-    }
-
-    private func refreshAll() async {
-        guard isPanelOpen, !items.isEmpty, configuredKeySuffix != nil, configuredKeyIsValid, !isRefreshing else { return }
-        await refresh(ids: items.map(\.asset.assetID), isBulk: true)
     }
 
     private func refresh(ids: [AssetID], isBulk: Bool) async {
@@ -496,10 +527,7 @@ final class PanelViewModel {
             return
         }
         isRefreshing = true
-        defer {
-            isRefreshing = false
-            drainPendingAddPrices()
-        }
+        defer { isRefreshing = false }
         do {
             let returned = try await requestPricesWithRetry(ids: ids)
             for quote in returned { quotes[quote.assetID] = quote }
@@ -507,7 +535,7 @@ final class PanelViewModel {
                 let returnedIDs = Set(returned.map(\.assetID))
                 lastBulkCoveredAssetIDs = Set(ids)
                 lastBulkMissingAssetIDs = Set(ids).subtracting(returnedIDs)
-                lastBulkRefreshAt = Date()
+                lastBulkRefreshAt = nowProvider()
                 lastSuccessfulWatchlistBulkAt = lastBulkRefreshAt
             }
             if beginLocalMutation() {
@@ -517,13 +545,12 @@ final class PanelViewModel {
             statusSelector.resolve(.persistenceFailure)
             statusSelector.resolveNetworkFailures()
             statusSelector.resolve(.rateLimited)
-            now = Date()
+            updatePresentationTime(nowProvider())
         } catch {
-            if (error as? NetworkError) != .cancelled {
-                if (error as? NetworkError) == .unauthorized { configuredKeyIsValid = false }
-                nextAllowedRequestAt = await networkState.nextAllowedRequestAt
-                activateNetworkStatus(for: error)
-            }
+            if error is CancellationError || (error as? NetworkError) == .cancelled { return }
+            if (error as? NetworkError) == .unauthorized { configuredKeyIsValid = false }
+            nextAllowedRequestAt = await networkState.nextAllowedRequestAt
+            activateNetworkStatus(for: error)
         }
     }
 
@@ -556,7 +583,39 @@ final class PanelViewModel {
         }
         let ids = Array(pendingAddAssetIDs)
         pendingAddAssetIDs.removeAll()
-        refreshTask = Task { [weak self] in await self?.refresh(ids: ids, isBulk: false) }
+        launchRefreshTask(ids: ids, isBulk: false)
+    }
+
+    private func scheduleAddPrice(for assetID: AssetID) {
+        guard isPanelOpen else { return }
+        if isRefreshing || refreshTask != nil {
+            pendingAddAssetIDs.insert(assetID)
+            return
+        }
+        launchRefreshTask(ids: [assetID], isBulk: false)
+    }
+
+    private func launchRefreshTask(ids: [AssetID], isBulk: Bool, cancelExisting: Bool = false) {
+        let previousTask = refreshTask
+        if cancelExisting {
+            previousTask?.cancel()
+        } else if previousTask != nil {
+            if !isBulk { pendingAddAssetIDs.formUnion(ids) }
+            return
+        }
+        let token = UUID()
+        refreshTaskToken = token
+        refreshTask = Task { [weak self] in
+            guard let self else { return }
+            if let previousTask { await previousTask.value }
+            guard !Task.isCancelled else { return }
+            await self.refresh(ids: ids, isBulk: isBulk)
+            if self.refreshTaskToken == token {
+                self.refreshTask = nil
+                self.refreshTaskToken = nil
+                self.drainPendingAddPrices()
+            }
+        }
     }
 
     private func saveCurrentCache() async throws {
@@ -599,15 +658,12 @@ final class PanelViewModel {
 
     private func startTimeline() {
         timelineTask?.cancel()
+        let interval = configuration.staleTimelineInterval
         timelineTask = Task { [weak self] in
             while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(30)) } catch { return }
+                do { try await Task.sleep(for: interval) } catch { return }
                 guard let self, self.isPanelOpen else { return }
-                self.now = Date()
-                if let deadline = self.nextAllowedRequestAt, deadline <= self.now {
-                    self.nextAllowedRequestAt = nil
-                    self.statusSelector.resolve(.rateLimited)
-                }
+                self.updatePresentationTime(self.nowProvider())
             }
         }
     }
@@ -647,10 +703,13 @@ final class PanelViewModel {
         openTask?.cancel()
         searchTask?.cancel()
         refreshTask?.cancel()
+        refreshTask = nil
+        refreshTaskToken = nil
         validationTask?.cancel()
         pendingAddAssetIDs.removeAll()
         isSearching = false
         isRefreshing = false
+        isValidatingKey = false
     }
 
     private func cancelOwnedTasks() {

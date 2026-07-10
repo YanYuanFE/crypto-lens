@@ -6,12 +6,11 @@ import XCTest
 @MainActor
 final class PanelSnapshotTests: XCTestCase {
     func testPanelModesRenderAtStressWidths() throws {
-        let repositoryRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
+        let defaultOutputDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CryptoLensPanelSnapshots", isDirectory: true)
         let outputDirectory = URL(
             fileURLWithPath: ProcessInfo.processInfo.environment["CRYPTO_LENS_SNAPSHOT_DIR"]
-                ?? repositoryRoot.appendingPathComponent(".build/panel-snapshots").path
+                ?? defaultOutputDirectory.path
         )
         try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
 
@@ -121,7 +120,12 @@ final class PanelSnapshotTests: XCTestCase {
             terminationHandler: {}
         )
         let bitcoin = asset(id: "bitcoin", symbol: "BTC", name: "Bitcoin", kind: .crypto)
-        let apple = asset(id: "apple-xstock", symbol: "AAPLX", name: "Apple xStock", kind: .stockToken)
+        let apple = asset(
+            id: "apple-xstock",
+            symbol: "AAPLX",
+            name: "Apple Incorporated Tokenized Equity With A Very Long Display Name",
+            kind: .stockToken
+        )
         model.isBootstrapping = false
         model.configuredKeySuffix = "1234"
         model.configuredKeyIsValid = true
@@ -138,7 +142,16 @@ final class PanelSnapshotTests: XCTestCase {
             model.query = "app"
             model.searchResults = [
                 SearchResult(asset: apple, marketCapRank: 1_214, thumbURL: nil),
-                SearchResult(asset: asset(id: "ethereum", symbol: "ETH", name: "Ethereum", kind: .crypto), marketCapRank: 2, thumbURL: nil)
+                SearchResult(
+                    asset: asset(
+                        id: "ethereum",
+                        symbol: "ETH",
+                        name: "Ethereum With A Very Long Search Result Name",
+                        kind: .crypto
+                    ),
+                    marketCapRank: nil,
+                    thumbURL: nil
+                )
             ]
         }
         return model

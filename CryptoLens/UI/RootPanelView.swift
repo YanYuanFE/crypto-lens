@@ -363,8 +363,7 @@ private struct WatchlistRow: View {
                 }
                 Text(item.asset.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            .layoutPriority(1)
-            Spacer(minLength: 6)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: 3) {
                 HStack(spacing: 4) {
                     if isStale { Image(systemName: "clock").font(.caption2) }
@@ -375,6 +374,8 @@ private struct WatchlistRow: View {
                     .frame(minHeight: 14)
             }
             .font(.system(.body, design: .monospaced))
+            .fixedSize(horizontal: true, vertical: false)
+            .layoutPriority(1)
             Group {
                 if isHovering {
                     Button("移除", systemImage: "trash", role: .destructive, action: remove)
@@ -486,13 +487,13 @@ private struct SearchResultRow: View {
                 }
                 Text(result.asset.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            Spacer(minLength: 5)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             if let rank = result.marketCapRank {
-                Text("#\(rank)").font(.caption).foregroundStyle(.secondary)
+                Text("#\(rank)").font(.caption).foregroundStyle(.secondary).fixedSize()
             }
             Button(isAdded ? "已添加" : "添加", systemImage: isAdded ? "checkmark" : "plus", action: add)
                 .labelStyle(.iconOnly)
-                .disabled(isAdded || isFull)
+                .disabled(!isAdded && isFull)
                 .help(isAdded ? "已在列表中" : (isFull ? "关注列表已满" : "添加"))
         }
         .padding(.horizontal, 12)

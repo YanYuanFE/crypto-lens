@@ -9,7 +9,7 @@
   </BuildAction>
   <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
     <Testables>
-      <TestableReference skipped="NO" parallelizable="YES">
+      <TestableReference skipped="NO" parallelizable="NO">
         <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="B2BFE0D3C68337315431B2F3" BuildableName="CryptoLensTests.xctest" BlueprintName="CryptoLensTests" ReferencedContainer="container:CryptoLens.xcodeproj"/>
       </TestableReference>
     </Testables>

@@ -26,3 +26,5 @@ jobs:
         run: ruby scripts/verify_localizations.rb .build/CIDerivedData
       - name: Verify product scope
         run: ruby scripts/verify_scope.rb
+      - name: Verify icon assets
+        run: ruby scripts/verify_assets.rb

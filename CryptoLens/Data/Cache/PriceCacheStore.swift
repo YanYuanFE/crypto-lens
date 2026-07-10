@@ -43,7 +43,7 @@ actor PriceCacheStore: CorruptionRecoveryReporting {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return .empty() }
         do {
             let cache = try AtomicJSONFile.read(PriceCacheEnvelope.self, from: fileURL)
-            guard cache.version == 1 else {
+            guard cache.version == 1, cache.currency == AppConfiguration.v1.quoteCurrency else {
                 throw CocoaError(.fileReadCorruptFile)
             }
             return cache

@@ -32,4 +32,17 @@ This file is a release gate, not a statement that distribution is currently appr
 - [ ] Finder icon is non-empty and Gatekeeper accepts the installed artifact.
 - [ ] `Data by CoinGecko` opens the reviewed attribution destination.
 
-No release artifact may be published while this document remains `BLOCKED` or any checklist item is unchecked.
+## Release Commands
+
+Configure a Developer ID Application identity and a `notarytool` keychain profile, then run:
+
+```bash
+DEVELOPER_ID_APPLICATION='Developer ID Application: Example Corp (TEAMID)' \
+DEVELOPMENT_TEAM='TEAMID' \
+NOTARYTOOL_PROFILE='crypto-lens-notary' \
+scripts/build_release.sh
+```
+
+The script first requires a named Release Owner and an approved CoinGecko shipping/display conclusion. It then archives a universal binary, submits it for notarization, staples the app, runs strict code-signing/Gatekeeper checks, and writes the candidate ZIP to `.build/distribution/`.
+
+After the clean-machine and installed-app checks, complete the checklist, set `Status: **READY**`, then run `ruby scripts/verify_release.rb` as the final publication gate. No release artifact may be published while this document remains `BLOCKED` or any checklist item is unchecked.

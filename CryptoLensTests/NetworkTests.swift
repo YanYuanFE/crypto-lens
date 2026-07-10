@@ -43,7 +43,13 @@ final class NetworkTests: XCTestCase {
     func testPricesTreatMissingIDsAsSoftMiss() async throws {
         let client = makeClient(key: "demo-secret")
         URLProtocolStub.handler = { request in
-            Self.response(
+            let query = try Self.queryItems(in: request)
+            XCTAssertEqual(request.url?.path, "/api/v3/simple/price")
+            XCTAssertEqual(query["ids"], "bitcoin,ethereum")
+            XCTAssertEqual(query["vs_currencies"], "usd")
+            XCTAssertEqual(query["include_24hr_change"], "true")
+            XCTAssertEqual(query["include_last_updated_at"], "true")
+            return Self.response(
                 request,
                 status: 200,
                 body: #"{"bitcoin":{"usd":68000.25,"usd_24h_change":2.5,"last_updated_at":1720000000}}"#
@@ -73,6 +79,73 @@ final class NetworkTests: XCTestCase {
 
         let deadline = await client.nextAllowedRequestAt
         XCTAssertGreaterThan(try! XCTUnwrap(deadline), Date().addingTimeInterval(10))
+    }
+
+    func testRateLimitGateAppliesAcrossSearchAndPriceWithoutAutomaticRetry() async {
+        let client = makeClient(key: "demo-secret")
+        let recorder = RequestRecorder()
+        URLProtocolStub.handler = { request in
+            recorder.record(request)
+            return Self.response(request, status: 429, body: "{}", headers: ["Retry-After": "60"])
+        }
+
+        await XCTAssertThrowsErrorAsync(try await client.search(query: "bit")) { error in
+            guard case NetworkError.rateLimited = error else {
+                return XCTFail("Expected rateLimited, got \(error)")
+            }
+        }
+        await XCTAssertThrowsErrorAsync(
+            try await client.prices(
+                for: [AssetID(rawValue: "bitcoin", source: .coinGecko)],
+                currency: "usd"
+            )
+        ) { error in
+            guard case NetworkError.rateLimited = error else {
+                return XCTFail("Expected shared rateLimited gate, got \(error)")
+            }
+        }
+
+        XCTAssertEqual(recorder.count, 1)
+    }
+
+    func testRateLimiterEnforcesMinimumIntervalAndWaitIsCancellable() async throws {
+        let limiter = RequestRateLimiter(minimumInterval: .milliseconds(100))
+        try await limiter.acquire()
+        let startedAt = Date()
+        try await limiter.acquire()
+        XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(startedAt), 0.08)
+
+        let slowLimiter = RequestRateLimiter(minimumInterval: .seconds(1))
+        try await slowLimiter.acquire()
+        let waitingTask = Task { try await slowLimiter.acquire() }
+        try await Task.sleep(for: .milliseconds(20))
+        waitingTask.cancel()
+        await XCTAssertThrowsErrorAsync(try await waitingTask.value) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
+
+    func testCandidateValidationUsesExplicitKeyAndRequiresBitcoinUSD() async throws {
+        let client = makeClient(key: "stored-key")
+        URLProtocolStub.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "x-cg-demo-api-key"), "candidate-key")
+            XCTAssertEqual(request.url?.path, "/api/v3/simple/price")
+            let query = try Self.queryItems(in: request)
+            XCTAssertEqual(query["ids"], "bitcoin")
+            XCTAssertEqual(query["vs_currencies"], "usd")
+            return Self.response(request, status: 200, body: #"{"bitcoin":{"usd":68000}}"#)
+        }
+
+        try await client.validate(candidateKey: "candidate-key")
+
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 200, body: #"{"bitcoin":{}}"#)
+        }
+        await XCTAssertThrowsErrorAsync(try await client.validate(candidateKey: "candidate-key")) { error in
+            guard case NetworkError.decoding = error else {
+                return XCTFail("Expected decoding failure, got \(error)")
+            }
+        }
     }
 
     func testResetNetworkStateClearsRateLimitGate() async throws {
@@ -117,6 +190,14 @@ final class NetworkTests: XCTestCase {
         )!
         return (response, Data(body.utf8))
     }
+
+    private static func queryItems(in request: URLRequest) throws -> [String: String] {
+        let url = try XCTUnwrap(request.url)
+        let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        return Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+            item.value.map { (item.name, $0) }
+        })
+    }
 }
 
 private final class MemoryAPIKeyStore: APIKeyStoring, @unchecked Sendable {
@@ -150,6 +231,17 @@ private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+}
+
+private final class RequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requests: [URLRequest] = []
+
+    var count: Int { lock.withLock { requests.count } }
+
+    func record(_ request: URLRequest) {
+        lock.withLock { requests.append(request) }
+    }
 }
 
 func XCTAssertThrowsErrorAsync<T>(

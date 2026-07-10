@@ -75,6 +75,43 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(loaded, [second])
     }
 
+    func testInterruptedTemporaryWriteCannotReplaceExistingSnapshot() async throws {
+        let directory = try makeTemporaryDirectory()
+        let store = FileWatchlistStore(directoryURL: directory)
+        let original = WatchlistItem(
+            id: UUID(),
+            asset: asset("bitcoin"),
+            sortOrder: 0,
+            addedAt: Date(timeIntervalSince1970: 1_720_000_000)
+        )
+        try await store.save([original])
+        try Data("{half-written".utf8).write(
+            to: directory.appendingPathComponent(".watchlist.json.interrupted.tmp")
+        )
+
+        let loaded = try await store.load()
+
+        XCTAssertEqual(loaded, [original])
+    }
+
+    func testNonUSDCurrencyCacheIsQuarantinedAndReportedOnce() async throws {
+        let directory = try makeTemporaryDirectory()
+        let cacheURL = directory.appendingPathComponent("price-cache.json")
+        let cache = PriceCacheEnvelope(currency: "eur")
+        try JSONCoding.encoder().encode(cache).write(to: cacheURL)
+        let store = PriceCacheStore(directoryURL: directory)
+
+        let loaded = try await store.load()
+
+        XCTAssertEqual(loaded, .empty())
+        let recoveredOnce = await store.consumeRecoveredCorruption()
+        let recoveredTwice = await store.consumeRecoveredCorruption()
+        XCTAssertTrue(recoveredOnce)
+        XCTAssertFalse(recoveredTwice)
+        let backups = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        XCTAssertEqual(backups.filter { $0.hasPrefix("price-cache.json.corrupt-") }.count, 1)
+    }
+
     private func quote(for id: AssetID, at date: Date) -> PriceQuote {
         PriceQuote(
             assetID: id,

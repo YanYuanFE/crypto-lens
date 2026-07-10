@@ -32,6 +32,27 @@ final class ClassificationTests: XCTestCase {
         XCTAssertEqual(classifier.kind(for: asset("bitcoin")), .crypto)
     }
 
+    func testMissingCatalogFallsBackToUnavailableCryptoOnlyClassifier() throws {
+        let bundleURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("bundle")
+        try FileManager.default.createDirectory(at: bundleURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: bundleURL) }
+        let info: [String: Any] = [
+            "CFBundleIdentifier": "app.cryptolens.tests.empty-bundle",
+            "CFBundleName": "EmptyBundle",
+            "CFBundlePackageType": "BNDL"
+        ]
+        let infoData = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+        try infoData.write(to: bundleURL.appendingPathComponent("Info.plist"))
+        let bundle = try XCTUnwrap(Bundle(path: bundleURL.path))
+
+        let classifier = CuratedStockTokenClassifier(bundle: bundle)
+
+        XCTAssertFalse(classifier.isAvailable)
+        XCTAssertEqual(classifier.kind(for: asset("apple-ondo-tokenized-stock")), .crypto)
+    }
+
     private func asset(_ id: String) -> Asset {
         Asset(assetID: AssetID(rawValue: id, source: .coinGecko), symbol: "X", name: "X", kind: .crypto, platform: nil, contractAddress: nil)
     }
