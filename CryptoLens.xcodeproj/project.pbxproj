@@ -1,0 +1,209 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4D3068C3942FF8B986893C2A /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D8887765D310B2E2A4C7BD /* AppConfiguration.swift */; };
+		F3EED60658BF8494700A5CBE /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8217DEC2A4CE403843B756A9 /* AppEnvironment.swift */; };
+		3D2EB4DA43812A30081B48E9 /* CryptoLensApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DEA76EC7FDFD22A86B93B48 /* CryptoLensApp.swift */; };
+		3F1B2A0357F1B9327D9D1040 /* PriceCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922DE346D383CE1666759CCC /* PriceCacheStore.swift */; };
+		0B67BDF9A7460954105FCAC4 /* KeychainAPIKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E879192530DEC37E386090D /* KeychainAPIKeyStore.swift */; };
+		F384CAEDB7511F8BD532F90D /* AtomicJSONFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17755277391BB77D212BF644 /* AtomicJSONFile.swift */; };
+		4ADD4F51E08B2387D78710A2 /* JSONCoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172ED659CA535043825B787A /* JSONCoding.swift */; };
+		34672637FDD6058F8ED014A5 /* FileWatchlistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63281E4C29B0DD1AA7FCB3E8 /* FileWatchlistStore.swift */; };
+		9626AE18F8A63814D91145ED /* StockTokenClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14DF525545AAF0640F510E38 /* StockTokenClassifier.swift */; };
+		6C22937A8FB4742908596653 /* Asset.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBB0EDDE5412D29F3BAC3E96 /* Asset.swift */; };
+		9BC688640556FA579674EC68 /* PriceQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D2EE3866900914B0367EE9 /* PriceQuote.swift */; };
+		74EB28A1BE1BC5E5D0A33D22 /* WatchlistItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222B6D7E5F92691779EE9DFE /* WatchlistItem.swift */; };
+		A823648103BA81944D14EFCE /* Repositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DAF8A18330F91DC8AEC941F /* Repositories.swift */; };
+		77A1C2BCD4B6AFD5C54B2326 /* WatchlistUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE70F7DAB26EFA6E1B056F5 /* WatchlistUseCase.swift */; };
+		B57AC3F7677402B8EF0D0B01 /* CoinGeckoClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C42C8FE86D8C29599ACBB0 /* CoinGeckoClient.swift */; };
+		72647EF27D77C3C02C40DB1B /* NetworkError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5181C163C1F2811B6AD73593 /* NetworkError.swift */; };
+		95DB486F620495FE8B980EA7 /* RequestRateLimiter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B5C6412F867046DFFE0BA5 /* RequestRateLimiter.swift */; };
+		253143F0675F895B8237D06A /* PanelViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6574FCFFED07203F6B2FF773 /* PanelViewModel.swift */; };
+		E62032973014907A9ED7E8D1 /* PanelWindowObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA9AA2EE03BAB8262ECE3AB /* PanelWindowObserver.swift */; };
+		E94CD7F2372809C2B6AEBE47 /* PriceFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DBDE77EA6E475B295D4B2DB /* PriceFormatter.swift */; };
+		9C9B414A4A82844D5DA9CA9D /* RootPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B28B27122CF317BE2611D17 /* RootPanelView.swift */; };
+		975D54B077D5CBE02A34757C /* ClassificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 885B34C0FA7C328D8E9B9574 /* ClassificationTests.swift */; };
+		AEE5AACA33A5CFE10FB5748A /* DomainContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4802236581F6257CA4955846 /* DomainContractTests.swift */; };
+		B8553F66DD5AEA93F946744A /* NetworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 243EBDA0CEF109284574C156 /* NetworkTests.swift */; };
+		619A29010EFA12FA5FD56124 /* PanelViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A2FA99906B62F2E670E395 /* PanelViewModelTests.swift */; };
+		A9A0BBF68B60B7BDF2BEC031 /* PriceFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 001EC49C3745BB6D54CC5B68 /* PriceFormatterTests.swift */; };
+		88AC7EC6C2C384A60BB08763 /* StorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1FB265AE2C48A47F678B01 /* StorageTests.swift */; };
+		372B766D4C4888292A22C7B5 /* WatchlistUseCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD826DA2B3F8E7F6B319802 /* WatchlistUseCaseTests.swift */; };
+		3AE624D8AED7E482BB7F730A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACF84B74F971AC9D11266097 /* Assets.xcassets */; };
+		1DC2065BD2914411F0EBF488 /* CuratedStockTokens.json in Resources */ = {isa = PBXBuildFile; fileRef = 311E14422DBE6DD743D16148 /* CuratedStockTokens.json */; };
+		AC0F4AB110301701C0D0D908 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F9879288C1281E5FDEFCBC71 /* Localizable.xcstrings */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8BF71806E4D35EA5C5BCE7BB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F75109BEB4DD8800DA6B45F8;
+			remoteInfo = CryptoLens;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F6D8887765D310B2E2A4C7BD /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/App/AppConfiguration.swift"; sourceTree = "<group>"; };
+		8217DEC2A4CE403843B756A9 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/App/AppEnvironment.swift"; sourceTree = "<group>"; };
+		3DEA76EC7FDFD22A86B93B48 /* CryptoLensApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/App/CryptoLensApp.swift"; sourceTree = "<group>"; };
+		922DE346D383CE1666759CCC /* PriceCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Data/Cache/PriceCacheStore.swift"; sourceTree = "<group>"; };
+		1E879192530DEC37E386090D /* KeychainAPIKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Data/Keychain/KeychainAPIKeyStore.swift"; sourceTree = "<group>"; };
+		17755277391BB77D212BF644 /* AtomicJSONFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Data/Persistence/AtomicJSONFile.swift"; sourceTree = "<group>"; };
+		172ED659CA535043825B787A /* JSONCoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Data/Persistence/JSONCoding.swift"; sourceTree = "<group>"; };
+		63281E4C29B0DD1AA7FCB3E8 /* FileWatchlistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Data/Watchlist/FileWatchlistStore.swift"; sourceTree = "<group>"; };
+		14DF525545AAF0640F510E38 /* StockTokenClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Domain/Classification/StockTokenClassifier.swift"; sourceTree = "<group>"; };
+		DBB0EDDE5412D29F3BAC3E96 /* Asset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Domain/Models/Asset.swift"; sourceTree = "<group>"; };
+		93D2EE3866900914B0367EE9 /* PriceQuote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Domain/Models/PriceQuote.swift"; sourceTree = "<group>"; };
+		222B6D7E5F92691779EE9DFE /* WatchlistItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Domain/Models/WatchlistItem.swift"; sourceTree = "<group>"; };
+		6DAF8A18330F91DC8AEC941F /* Repositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Domain/Protocols/Repositories.swift"; sourceTree = "<group>"; };
+		CEE70F7DAB26EFA6E1B056F5 /* WatchlistUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Domain/UseCases/WatchlistUseCase.swift"; sourceTree = "<group>"; };
+		E2C42C8FE86D8C29599ACBB0 /* CoinGeckoClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Network/CoinGeckoClient.swift"; sourceTree = "<group>"; };
+		5181C163C1F2811B6AD73593 /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Network/NetworkError.swift"; sourceTree = "<group>"; };
+		A3B5C6412F867046DFFE0BA5 /* RequestRateLimiter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/Network/RequestRateLimiter.swift"; sourceTree = "<group>"; };
+		6574FCFFED07203F6B2FF773 /* PanelViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/UI/PanelViewModel.swift"; sourceTree = "<group>"; };
+		EDA9AA2EE03BAB8262ECE3AB /* PanelWindowObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/UI/PanelWindowObserver.swift"; sourceTree = "<group>"; };
+		9DBDE77EA6E475B295D4B2DB /* PriceFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/UI/PriceFormatter.swift"; sourceTree = "<group>"; };
+		4B28B27122CF317BE2611D17 /* RootPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLens/UI/RootPanelView.swift"; sourceTree = "<group>"; };
+		885B34C0FA7C328D8E9B9574 /* ClassificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/ClassificationTests.swift"; sourceTree = "<group>"; };
+		4802236581F6257CA4955846 /* DomainContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/DomainContractTests.swift"; sourceTree = "<group>"; };
+		243EBDA0CEF109284574C156 /* NetworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/NetworkTests.swift"; sourceTree = "<group>"; };
+		15A2FA99906B62F2E670E395 /* PanelViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/PanelViewModelTests.swift"; sourceTree = "<group>"; };
+		001EC49C3745BB6D54CC5B68 /* PriceFormatterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/PriceFormatterTests.swift"; sourceTree = "<group>"; };
+		AE1FB265AE2C48A47F678B01 /* StorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/StorageTests.swift"; sourceTree = "<group>"; };
+		EFD826DA2B3F8E7F6B319802 /* WatchlistUseCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CryptoLensTests/WatchlistUseCaseTests.swift"; sourceTree = "<group>"; };
+		ACF84B74F971AC9D11266097 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "CryptoLens/Resources/Assets.xcassets"; sourceTree = "<group>"; };
+		311E14422DBE6DD743D16148 /* CuratedStockTokens.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "CryptoLens/Resources/CuratedStockTokens.json"; sourceTree = "<group>"; };
+		F9879288C1281E5FDEFCBC71 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = "CryptoLens/Resources/Localizable.xcstrings"; sourceTree = "<group>"; };
+		C10C6508867440355EB293A8 /* CryptoLens.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "CryptoLens/Resources/CryptoLens.entitlements"; sourceTree = "<group>"; };
+		5418EDEE6C8669E6ECFCA9F1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CryptoLens/Resources/Info.plist"; sourceTree = "<group>"; };
+		4E783A9E10D2A8ABA38CD11C /* CryptoLens.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CryptoLens.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8ED46F91FB31AC8D16172F9E /* CryptoLensTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CryptoLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		65C579F5E9F9858C77139572 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		37985F6ED66D3525C18B5189 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		870B3294C0CBD48AF6BBCC1B = {isa = PBXGroup; children = (3C3B0F03DC089F93B8457928 /* CryptoLens */, A619C04D8A87AB070162A099 /* CryptoLensTests */, 615B463D1028E4E24B674CF7 /* Products */); sourceTree = "<group>"; };
+		3C3B0F03DC089F93B8457928 /* CryptoLens */ = {isa = PBXGroup; children = (F6D8887765D310B2E2A4C7BD /* AppConfiguration.swift */, 8217DEC2A4CE403843B756A9 /* AppEnvironment.swift */, 3DEA76EC7FDFD22A86B93B48 /* CryptoLensApp.swift */, 922DE346D383CE1666759CCC /* PriceCacheStore.swift */, 1E879192530DEC37E386090D /* KeychainAPIKeyStore.swift */, 17755277391BB77D212BF644 /* AtomicJSONFile.swift */, 172ED659CA535043825B787A /* JSONCoding.swift */, 63281E4C29B0DD1AA7FCB3E8 /* FileWatchlistStore.swift */, 14DF525545AAF0640F510E38 /* StockTokenClassifier.swift */, DBB0EDDE5412D29F3BAC3E96 /* Asset.swift */, 93D2EE3866900914B0367EE9 /* PriceQuote.swift */, 222B6D7E5F92691779EE9DFE /* WatchlistItem.swift */, 6DAF8A18330F91DC8AEC941F /* Repositories.swift */, CEE70F7DAB26EFA6E1B056F5 /* WatchlistUseCase.swift */, E2C42C8FE86D8C29599ACBB0 /* CoinGeckoClient.swift */, 5181C163C1F2811B6AD73593 /* NetworkError.swift */, A3B5C6412F867046DFFE0BA5 /* RequestRateLimiter.swift */, 6574FCFFED07203F6B2FF773 /* PanelViewModel.swift */, EDA9AA2EE03BAB8262ECE3AB /* PanelWindowObserver.swift */, 9DBDE77EA6E475B295D4B2DB /* PriceFormatter.swift */, 4B28B27122CF317BE2611D17 /* RootPanelView.swift */, ACF84B74F971AC9D11266097 /* Assets.xcassets */, 311E14422DBE6DD743D16148 /* CuratedStockTokens.json */, F9879288C1281E5FDEFCBC71 /* Localizable.xcstrings */, C10C6508867440355EB293A8 /* CryptoLens.entitlements */, 5418EDEE6C8669E6ECFCA9F1 /* Info.plist */); name = CryptoLens; sourceTree = "<group>"; };
+		A619C04D8A87AB070162A099 /* CryptoLensTests */ = {isa = PBXGroup; children = (885B34C0FA7C328D8E9B9574 /* ClassificationTests.swift */, 4802236581F6257CA4955846 /* DomainContractTests.swift */, 243EBDA0CEF109284574C156 /* NetworkTests.swift */, 15A2FA99906B62F2E670E395 /* PanelViewModelTests.swift */, 001EC49C3745BB6D54CC5B68 /* PriceFormatterTests.swift */, AE1FB265AE2C48A47F678B01 /* StorageTests.swift */, EFD826DA2B3F8E7F6B319802 /* WatchlistUseCaseTests.swift */); name = CryptoLensTests; sourceTree = "<group>"; };
+		615B463D1028E4E24B674CF7 /* Products */ = {isa = PBXGroup; children = (4E783A9E10D2A8ABA38CD11C /* CryptoLens.app */, 8ED46F91FB31AC8D16172F9E /* CryptoLensTests.xctest */); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F75109BEB4DD8800DA6B45F8 /* CryptoLens */ = {isa = PBXNativeTarget; buildConfigurationList = 268D2D29669C504AD910B275; buildPhases = (CE6F732915415528288BBD76, 65C579F5E9F9858C77139572, A1BE90F212D813EE17901F5F); buildRules = (); dependencies = (); name = CryptoLens; productName = CryptoLens; productReference = 4E783A9E10D2A8ABA38CD11C; productType = "com.apple.product-type.application"; };
+		B2BFE0D3C68337315431B2F3 /* CryptoLensTests */ = {isa = PBXNativeTarget; buildConfigurationList = 7456573A07C28463D34C2FFC; buildPhases = (1C7E7C607EA002DE1D2FCDFC, 37985F6ED66D3525C18B5189, 00E4AFE12A79B7B5939BA5FC); buildRules = (); dependencies = (7AA480CABC04496CA1A7D1C1); name = CryptoLensTests; productName = CryptoLensTests; productReference = 8ED46F91FB31AC8D16172F9E; productType = "com.apple.product-type.bundle.unit-test"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2660; LastUpgradeCheck = 2660; TargetAttributes = {F75109BEB4DD8800DA6B45F8 = {CreatedOnToolsVersion = 26.0; }; B2BFE0D3C68337315431B2F3 = {CreatedOnToolsVersion = 26.0; TestTargetID = F75109BEB4DD8800DA6B45F8; }; }; }; buildConfigurationList = 6650A2B5E24FA7522CE6B81C; compatibilityVersion = "Xcode 15.0"; developmentRegion = zh-Hans; hasScannedForEncodings = 0; knownRegions = (zh-Hans, Base); mainGroup = 870B3294C0CBD48AF6BBCC1B; productRefGroup = 615B463D1028E4E24B674CF7; projectDirPath = ""; projectRoot = ""; targets = (F75109BEB4DD8800DA6B45F8, B2BFE0D3C68337315431B2F3); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1BE90F212D813EE17901F5F /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (3AE624D8AED7E482BB7F730A /* Assets.xcassets in Resources */, 1DC2065BD2914411F0EBF488 /* CuratedStockTokens.json in Resources */, AC0F4AB110301701C0D0D908 /* Localizable.xcstrings in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		00E4AFE12A79B7B5939BA5FC /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CE6F732915415528288BBD76 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (4D3068C3942FF8B986893C2A /* AppConfiguration.swift in Sources */, F3EED60658BF8494700A5CBE /* AppEnvironment.swift in Sources */, 3D2EB4DA43812A30081B48E9 /* CryptoLensApp.swift in Sources */, 3F1B2A0357F1B9327D9D1040 /* PriceCacheStore.swift in Sources */, 0B67BDF9A7460954105FCAC4 /* KeychainAPIKeyStore.swift in Sources */, F384CAEDB7511F8BD532F90D /* AtomicJSONFile.swift in Sources */, 4ADD4F51E08B2387D78710A2 /* JSONCoding.swift in Sources */, 34672637FDD6058F8ED014A5 /* FileWatchlistStore.swift in Sources */, 9626AE18F8A63814D91145ED /* StockTokenClassifier.swift in Sources */, 6C22937A8FB4742908596653 /* Asset.swift in Sources */, 9BC688640556FA579674EC68 /* PriceQuote.swift in Sources */, 74EB28A1BE1BC5E5D0A33D22 /* WatchlistItem.swift in Sources */, A823648103BA81944D14EFCE /* Repositories.swift in Sources */, 77A1C2BCD4B6AFD5C54B2326 /* WatchlistUseCase.swift in Sources */, B57AC3F7677402B8EF0D0B01 /* CoinGeckoClient.swift in Sources */, 72647EF27D77C3C02C40DB1B /* NetworkError.swift in Sources */, 95DB486F620495FE8B980EA7 /* RequestRateLimiter.swift in Sources */, 253143F0675F895B8237D06A /* PanelViewModel.swift in Sources */, E62032973014907A9ED7E8D1 /* PanelWindowObserver.swift in Sources */, E94CD7F2372809C2B6AEBE47 /* PriceFormatter.swift in Sources */, 9C9B414A4A82844D5DA9CA9D /* RootPanelView.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		1C7E7C607EA002DE1D2FCDFC /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (975D54B077D5CBE02A34757C /* ClassificationTests.swift in Sources */, AEE5AACA33A5CFE10FB5748A /* DomainContractTests.swift in Sources */, B8553F66DD5AEA93F946744A /* NetworkTests.swift in Sources */, 619A29010EFA12FA5FD56124 /* PanelViewModelTests.swift in Sources */, A9A0BBF68B60B7BDF2BEC031 /* PriceFormatterTests.swift in Sources */, 88AC7EC6C2C384A60BB08763 /* StorageTests.swift in Sources */, 372B766D4C4888292A22C7B5 /* WatchlistUseCaseTests.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7AA480CABC04496CA1A7D1C1 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = F75109BEB4DD8800DA6B45F8 /* CryptoLens */; targetProxy = 8BF71806E4D35EA5C5BCE7BB /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D12546C7310DEE778E55E187 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			ALWAYS_SEARCH_USER_PATHS = NO;
+			CLANG_ENABLE_MODULES = YES;
+			CLANG_ENABLE_OBJC_ARC = YES;
+			MACOSX_DEPLOYMENT_TARGET = 14.0;
+			SDKROOT = macosx;
+			SWIFT_STRICT_CONCURRENCY = complete;
+			DEBUG_INFORMATION_FORMAT = dwarf;
+			GCC_OPTIMIZATION_LEVEL = 0;
+			SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+		}; name = Debug; };
+		AA23A758EC6A71B7321371F8 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+			ALWAYS_SEARCH_USER_PATHS = NO;
+			CLANG_ENABLE_MODULES = YES;
+			CLANG_ENABLE_OBJC_ARC = YES;
+			MACOSX_DEPLOYMENT_TARGET = 14.0;
+			SDKROOT = macosx;
+			SWIFT_STRICT_CONCURRENCY = complete;
+			DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+			SWIFT_COMPILATION_MODE = wholemodule;
+		}; name = Release; };
+		F8A000F6C06CBAF02E297063 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+			CODE_SIGN_ENTITLEMENTS = "CryptoLens/Resources/CryptoLens.entitlements";
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			ENABLE_HARDENED_RUNTIME = YES;
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = "CryptoLens/Resources/Info.plist";
+			LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = app.cryptolens;
+			PRODUCT_NAME = CryptoLens;
+			SWIFT_EMIT_LOC_STRINGS = YES;
+			SWIFT_VERSION = 6.0;
+			ENABLE_TESTABILITY = YES;
+		}; name = Debug; };
+		B2DB900C1DBD2C369C18C79F /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+			ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+			CODE_SIGN_ENTITLEMENTS = "CryptoLens/Resources/CryptoLens.entitlements";
+			CODE_SIGN_STYLE = Automatic;
+			CURRENT_PROJECT_VERSION = 1;
+			ENABLE_HARDENED_RUNTIME = YES;
+			GENERATE_INFOPLIST_FILE = NO;
+			INFOPLIST_FILE = "CryptoLens/Resources/Info.plist";
+			LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+			MARKETING_VERSION = 0.1.0;
+			PRODUCT_BUNDLE_IDENTIFIER = app.cryptolens;
+			PRODUCT_NAME = CryptoLens;
+			SWIFT_EMIT_LOC_STRINGS = YES;
+			SWIFT_VERSION = 6.0;
+		}; name = Release; };
+		97D00686DF93A6757E131E61 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			BUNDLE_LOADER = "$(TEST_HOST)";
+			CODE_SIGN_STYLE = Automatic;
+			GENERATE_INFOPLIST_FILE = YES;
+			MACOSX_DEPLOYMENT_TARGET = 14.0;
+			PRODUCT_BUNDLE_IDENTIFIER = app.cryptolens.tests;
+			PRODUCT_NAME = CryptoLensTests;
+			SWIFT_VERSION = 6.0;
+			TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CryptoLens.app/Contents/MacOS/CryptoLens";
+		}; name = Debug; };
+		8F9626E16DBE589614A06B78 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+			BUNDLE_LOADER = "$(TEST_HOST)";
+			CODE_SIGN_STYLE = Automatic;
+			GENERATE_INFOPLIST_FILE = YES;
+			MACOSX_DEPLOYMENT_TARGET = 14.0;
+			PRODUCT_BUNDLE_IDENTIFIER = app.cryptolens.tests;
+			PRODUCT_NAME = CryptoLensTests;
+			SWIFT_VERSION = 6.0;
+			TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CryptoLens.app/Contents/MacOS/CryptoLens";
+		}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6650A2B5E24FA7522CE6B81C /* Build configuration list for PBXProject */ = {isa = XCConfigurationList; buildConfigurations = (D12546C7310DEE778E55E187, AA23A758EC6A71B7321371F8); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		268D2D29669C504AD910B275 /* Build configuration list for PBXNativeTarget CryptoLens */ = {isa = XCConfigurationList; buildConfigurations = (F8A000F6C06CBAF02E297063, B2DB900C1DBD2C369C18C79F); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		7456573A07C28463D34C2FFC /* Build configuration list for PBXNativeTarget CryptoLensTests */ = {isa = XCConfigurationList; buildConfigurations = (97D00686DF93A6757E131E61, 8F9626E16DBE589614A06B78); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+}

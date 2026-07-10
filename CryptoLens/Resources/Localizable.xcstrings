@@ -1,0 +1,18 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "strings" : {
+    "Crypto Lens" : {
+      "comment" : "Application name"
+    },
+    "暂无关注资产" : {
+      "comment" : "Empty Watchlist title"
+    },
+    "设置" : {
+      "comment" : "Settings command"
+    },
+    "退出 Crypto Lens" : {
+      "comment" : "Quit command"
+    }
+  },
+  "version" : "1.0"
+}

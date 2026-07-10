@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: ruby scripts/generate_xcodeproj.rb
+      - name: Test
+        run: >-
+          xcodebuild test
+          -project CryptoLens.xcodeproj
+          -scheme CryptoLens
+          -destination 'platform=macOS'
+          CODE_SIGNING_ALLOWED=NO
+          ONLY_ACTIVE_ARCH=YES
