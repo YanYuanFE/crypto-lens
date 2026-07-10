@@ -35,6 +35,11 @@ actor RequestRateLimiter {
             nextAllowedRequestAt = proposed
         }
     }
+
+    func reset() {
+        lastRequestAt = nil
+        nextAllowedRequestAt = nil
+    }
 }
 
 private extension Duration {

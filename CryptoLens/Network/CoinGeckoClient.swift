@@ -1,5 +1,10 @@
 import Foundation
 
+protocol NetworkStateProviding: Sendable {
+    var nextAllowedRequestAt: Date? { get async }
+    func resetNetworkState() async
+}
+
 struct APIConfiguration: Sendable {
     let baseURL: URL
     let apiKeyHeaderName: String
@@ -10,7 +15,7 @@ struct APIConfiguration: Sendable {
     )
 }
 
-actor CoinGeckoClient: AssetSearching, PriceProviding {
+actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
     private let apiKeyStore: any APIKeyStoring
     private let session: URLSession
     private let rateLimiter: RequestRateLimiter
@@ -32,6 +37,10 @@ actor CoinGeckoClient: AssetSearching, PriceProviding {
 
     var nextAllowedRequestAt: Date? {
         get async { await rateLimiter.nextAllowedRequestAt }
+    }
+
+    func resetNetworkState() async {
+        await rateLimiter.reset()
     }
 
     func search(query: String) async throws -> [SearchResult] {

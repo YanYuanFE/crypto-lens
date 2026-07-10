@@ -16,3 +16,7 @@ protocol APIKeyStoring: Sendable {
     func saveDemoKey(_ key: String) throws
     func deleteDemoKey() throws
 }
+
+protocol CorruptionRecoveryReporting: Sendable {
+    func consumeRecoveredCorruption() async -> Bool
+}

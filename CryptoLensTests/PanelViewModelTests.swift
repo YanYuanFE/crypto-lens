@@ -46,15 +46,89 @@ final class PanelViewModelTests: XCTestCase {
         model.panelVisibilityChanged(isVisible: false)
     }
 
+    func testQuitWaitsForAcceptedLocalMutation() async throws {
+        let service = CountingMarketService()
+        let termination = TerminationRecorder()
+        let model = try makeModel(
+            service: service,
+            items: [],
+            openDebounce: .milliseconds(10),
+            saveDelay: .milliseconds(100),
+            terminationHandler: { termination.wasCalled = true }
+        )
+        await model.bootstrap()
+        let asset = Asset(
+            assetID: AssetID(rawValue: "bitcoin", source: .coinGecko),
+            symbol: "BTC",
+            name: "Bitcoin",
+            kind: .crypto,
+            platform: nil,
+            contractAddress: nil
+        )
+        let result = SearchResult(asset: asset, marketCapRank: 1, thumbURL: nil)
+
+        let addTask = Task { await model.add(result) }
+        try await Task.sleep(for: .milliseconds(10))
+        model.beginQuit()
+        try await Task.sleep(for: .milliseconds(30))
+        XCTAssertFalse(termination.wasCalled)
+
+        await addTask.value
+        try await Task.sleep(for: .milliseconds(40))
+        XCTAssertTrue(termination.wasCalled)
+        XCTAssertTrue(model.isShuttingDown)
+    }
+
+    func testSearchRetryBypassesDebounceAndCancelsPendingSearch() async throws {
+        let service = CountingMarketService()
+        let model = try makeModel(service: service, items: [], openDebounce: .milliseconds(10))
+        await model.bootstrap()
+        model.query = "bi"
+        model.queryChanged()
+
+        model.retrySearch()
+        try await Task.sleep(for: .milliseconds(50))
+
+        let count = await service.searchRequestCount
+        XCTAssertEqual(count, 1)
+    }
+
+    func testClosingPanelRemasksCandidateKey() async throws {
+        let service = CountingMarketService()
+        let model = try makeModel(service: service, items: [], openDebounce: .milliseconds(10))
+        await model.bootstrap()
+        model.isCandidateKeyRevealed = true
+
+        model.panelVisibilityChanged(isVisible: true)
+        model.panelVisibilityChanged(isVisible: false)
+
+        XCTAssertFalse(model.isCandidateKeyRevealed)
+    }
+
+    func testReorderFinalizesRemovalBatch() async throws {
+        let service = CountingMarketService()
+        let initial = [item("a"), item("b"), item("c")]
+        let model = try makeModel(service: service, items: initial, openDebounce: .milliseconds(10))
+        await model.bootstrap()
+        await model.remove(initial[1])
+        XCTAssertEqual(model.removalBatchCount, 1)
+
+        await model.move(initial[0], by: 1)
+
+        XCTAssertEqual(model.removalBatchCount, 0)
+    }
+
     private func makeModel(
         service: CountingMarketService,
         items: [WatchlistItem],
-        openDebounce: Duration
+        openDebounce: Duration,
+        saveDelay: Duration = .zero,
+        terminationHandler: @escaping @MainActor @Sendable () -> Void = {}
     ) throws -> PanelViewModel {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        let store = PanelWatchlistStore(items: items)
+        let store = PanelWatchlistStore(items: items, saveDelay: saveDelay)
         let configuration = AppConfiguration(
             quoteCurrency: "usd",
             openRefreshDebounce: openDebounce,
@@ -69,8 +143,10 @@ final class PanelViewModelTests: XCTestCase {
             searcher: service,
             priceProvider: service,
             keyValidator: service,
+            networkState: service,
             classifier: CryptoOnlyClassifier(),
-            configuration: configuration
+            configuration: configuration,
+            terminationHandler: terminationHandler
         )
     }
 
@@ -87,7 +163,7 @@ final class PanelViewModelTests: XCTestCase {
     }
 }
 
-private actor CountingMarketService: AssetSearching, PriceProviding, APIKeyValidating {
+private actor CountingMarketService: AssetSearching, PriceProviding, APIKeyValidating, NetworkStateProviding {
     private(set) var searchRequestCount = 0
     private(set) var priceRequestCount = 0
 
@@ -102,13 +178,22 @@ private actor CountingMarketService: AssetSearching, PriceProviding, APIKeyValid
     }
 
     func validate(candidateKey: String) async throws {}
+    var nextAllowedRequestAt: Date? { nil }
+    func resetNetworkState() async {}
 }
 
 private actor PanelWatchlistStore: WatchlistStoring {
     private var items: [WatchlistItem]
-    init(items: [WatchlistItem]) { self.items = items }
+    private let saveDelay: Duration
+    init(items: [WatchlistItem], saveDelay: Duration = .zero) {
+        self.items = items
+        self.saveDelay = saveDelay
+    }
     func load() async throws -> [WatchlistItem] { items }
-    func save(_ items: [WatchlistItem]) async throws { self.items = items }
+    func save(_ items: [WatchlistItem]) async throws {
+        if saveDelay > .zero { try await Task.sleep(for: saveDelay) }
+        self.items = items
+    }
 }
 
 private struct PanelAPIKeyStore: APIKeyStoring {
@@ -119,4 +204,9 @@ private struct PanelAPIKeyStore: APIKeyStoring {
 
 private struct CryptoOnlyClassifier: StockTokenClassifying {
     func kind(for asset: Asset) -> AssetKind { .crypto }
+}
+
+@MainActor
+private final class TerminationRecorder {
+    var wasCalled = false
 }

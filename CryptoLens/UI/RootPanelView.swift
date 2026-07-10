@@ -11,8 +11,8 @@ struct RootPanelView: View {
                 .frame(height: 50)
             Divider()
 
-            if let message = model.bannerMessage, !message.isEmpty {
-                statusBanner(message)
+            if let banner = model.statusBanner {
+                statusBanner(banner)
             }
 
             if model.mode != .settings {
@@ -55,12 +55,18 @@ struct RootPanelView: View {
             }
         }
         .task { await model.bootstrap() }
+        .disabled(model.isShuttingDown)
+        .overlay {
+            if model.isShuttingDown {
+                ProgressView().controlSize(.small)
+            }
+        }
         .confirmationDialog(
             "移除 API Key？",
             isPresented: $confirmKeyRemoval,
             titleVisibility: .visible
         ) {
-            Button("移除 API Key", role: .destructive) { model.removeAPIKey() }
+            Button("移除 API Key", role: .destructive) { Task { await model.removeAPIKey() } }
             Button("取消", role: .cancel) {}
         } message: {
             Text("关注列表和本地行情缓存会保留。")
@@ -104,15 +110,25 @@ struct RootPanelView: View {
     private var refreshHelp: String {
         if model.items.isEmpty { return "暂无关注资产" }
         if model.configuredKeySuffix == nil { return "请先配置 API Key" }
+        if !model.configuredKeyIsValid { return "API Key 无效" }
+        if let deadline = model.nextAllowedRequestAt, deadline > model.now {
+            return "请求受限，\(model.manualRefreshRemaining) 秒后可刷新"
+        }
         if model.manualRefreshRemaining > 0 { return "\(model.manualRefreshRemaining) 秒后可刷新" }
         return "刷新行情"
     }
 
-    private func statusBanner(_ message: String) -> some View {
+    private func statusBanner(_ banner: StatusBannerPresentation) -> some View {
         HStack(spacing: 7) {
             Image(systemName: "exclamationmark.circle.fill")
-            Text(message).lineLimit(2)
+            Text(banner.message).lineLimit(2)
             Spacer(minLength: 0)
+            if banner.isAcknowledgable {
+                Button("确认", systemImage: "xmark") { model.acknowledgeStatusEvent() }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .help("确认")
+            }
         }
         .font(.caption)
         .foregroundStyle(.primary)
@@ -148,20 +164,30 @@ struct RootPanelView: View {
         } else if model.items.isEmpty {
             ContentUnavailableView("暂无关注资产", systemImage: "star")
         } else {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(model.items) { item in
-                        WatchlistRow(
-                            item: item,
-                            quote: model.quotes[item.asset.assetID],
-                            isStale: model.quotes[item.asset.assetID].map(model.isStale) ?? false,
-                            canMoveUp: item.id != model.items.first?.id,
-                            canMoveDown: item.id != model.items.last?.id,
-                            moveUp: { Task { await model.move(item, by: -1) } },
-                            moveDown: { Task { await model.move(item, by: 1) } },
-                            remove: { Task { await model.remove(item) } }
-                        )
-                        Divider().padding(.leading, 52)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(model.items) { item in
+                            WatchlistRow(
+                                item: item,
+                                quote: model.quotes[item.asset.assetID],
+                                isStale: model.quotes[item.asset.assetID].map(model.isStale) ?? false,
+                                isHighlighted: model.highlightedAssetID == item.asset.assetID,
+                                canMoveUp: item.id != model.items.first?.id,
+                                canMoveDown: item.id != model.items.last?.id,
+                                moveUp: { Task { await model.move(item, by: -1) } },
+                                moveDown: { Task { await model.move(item, by: 1) } },
+                                remove: { Task { await model.remove(item) } }
+                            )
+                            .id(item.asset.assetID)
+                            Divider().padding(.leading, 52)
+                        }
+                    }
+                }
+                .onChange(of: model.highlightedAssetID) { _, assetID in
+                    guard let assetID else { return }
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        proxy.scrollTo(assetID, anchor: .center)
                     }
                 }
             }
@@ -204,8 +230,21 @@ struct RootPanelView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    SecureField("输入新的 Demo API Key", text: $model.candidateKey)
+                    HStack(spacing: 6) {
+                        Group {
+                            if model.isCandidateKeyRevealed {
+                                TextField("输入新的 Demo API Key", text: $model.candidateKey)
+                            } else {
+                                SecureField("输入新的 Demo API Key", text: $model.candidateKey)
+                            }
+                        }
                         .textFieldStyle(.roundedBorder)
+                        Button(model.isCandidateKeyRevealed ? "隐藏 API Key" : "显示 API Key", systemImage: model.isCandidateKeyRevealed ? "eye.slash" : "eye") {
+                            model.isCandidateKeyRevealed.toggle()
+                        }
+                        .labelStyle(.iconOnly)
+                        .help(model.isCandidateKeyRevealed ? "隐藏 API Key" : "显示 API Key")
+                    }
                     if let message = model.localMessage {
                         Text(message).font(.caption).foregroundStyle(.red)
                     }
@@ -253,7 +292,7 @@ struct RootPanelView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
-            Button("退出 Crypto Lens", systemImage: "power") { model.quit() }
+            Button("退出 Crypto Lens", systemImage: "power") { model.beginQuit() }
                 .labelStyle(.iconOnly)
                 .help("退出 Crypto Lens")
                 .frame(width: 32)
@@ -266,6 +305,7 @@ private struct WatchlistRow: View {
     let item: WatchlistItem
     let quote: PriceQuote?
     let isStale: Bool
+    let isHighlighted: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
     let moveUp: () -> Void
@@ -315,6 +355,7 @@ private struct WatchlistRow: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 56)
+        .background(isHighlighted ? Color.accentColor.opacity(0.14) : Color.clear)
         .help(isStale ? "行情可能已过时" : item.asset.name)
     }
 

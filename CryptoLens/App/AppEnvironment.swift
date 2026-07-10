@@ -19,6 +19,7 @@ struct AppEnvironment {
                 searcher: client,
                 priceProvider: client,
                 keyValidator: client,
+                networkState: client,
                 classifier: classifier
             )
         )

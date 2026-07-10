@@ -61,6 +61,20 @@ final class StorageTests: XCTestCase {
         XCTAssertEqual(loaded.lastBulkRefreshAt, now)
     }
 
+    func testAtomicReplacementKeepsSecondCompleteSnapshot() async throws {
+        let directory = try makeTemporaryDirectory()
+        let store = FileWatchlistStore(directoryURL: directory)
+        let date = Date(timeIntervalSince1970: 1_720_000_000)
+        let first = WatchlistItem(id: UUID(), asset: asset("bitcoin"), sortOrder: 0, addedAt: date)
+        let second = WatchlistItem(id: UUID(), asset: asset("ethereum"), sortOrder: 0, addedAt: date)
+
+        try await store.save([first])
+        try await store.save([second])
+        let loaded = try await store.load()
+
+        XCTAssertEqual(loaded, [second])
+    }
+
     private func quote(for id: AssetID, at date: Date) -> PriceQuote {
         PriceQuote(
             assetID: id,
@@ -70,6 +84,17 @@ final class StorageTests: XCTestCase {
             fetchedAt: date,
             lastUpdatedAt: nil,
             source: .coinGecko
+        )
+    }
+
+    private func asset(_ id: String) -> Asset {
+        Asset(
+            assetID: AssetID(rawValue: id, source: .coinGecko),
+            symbol: id.uppercased(),
+            name: id,
+            kind: .crypto,
+            platform: nil,
+            contractAddress: nil
         )
     }
 

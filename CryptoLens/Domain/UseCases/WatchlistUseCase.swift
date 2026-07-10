@@ -36,6 +36,11 @@ actor WatchlistUseCase {
         persistedSnapshot
     }
 
+    func consumeRecoveredCorruption() async -> Bool {
+        guard let reporter = store as? any CorruptionRecoveryReporting else { return false }
+        return await reporter.consumeRecoveredCorruption()
+    }
+
     @discardableResult
     func add(asset: Asset, at date: Date = Date()) async throws -> WatchlistItem {
         await acquireMutationLock()

@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Observation
+import OSLog
 
 protocol APIKeyValidating: Sendable {
     func validate(candidateKey: String) async throws
@@ -23,8 +24,10 @@ final class PanelViewModel {
     private let searcher: any AssetSearching
     private let priceProvider: any PriceProviding
     private let keyValidator: any APIKeyValidating
+    private let networkState: any NetworkStateProviding
     private let classifier: any StockTokenClassifying
     private let configuration: AppConfiguration
+    private let terminationHandler: @MainActor @Sendable () -> Void
 
     private var openTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
@@ -32,10 +35,13 @@ final class PanelViewModel {
     private var validationTask: Task<Void, Never>?
     private var timelineTask: Task<Void, Never>?
     private var removalFinalizeTask: Task<Void, Never>?
+    private var highlightTask: Task<Void, Never>?
     private var pendingAddAssetIDs: Set<AssetID> = []
     private var removalBatch: [(entry: RemovedWatchlistEntry, quote: PriceQuote?)] = []
     private var searchGeneration = 0
     private var isPanelOpen = false
+    private var activeLocalMutationCount = 0
+    private var shutdownTask: Task<Void, Never>?
 
     var mode: PanelMode = .watchlist
     var isBootstrapping = true
@@ -45,9 +51,10 @@ final class PanelViewModel {
     var searchResults: [SearchResult] = []
     var isSearching = false
     var isRefreshing = false
-    var bannerMessage: String?
+    private var statusSelector = StatusSelector()
     var localMessage: String?
     var candidateKey = ""
+    var isCandidateKeyRevealed = false
     var isValidatingKey = false
     var configuredKeySuffix: String?
     var configuredKeyIsValid = false
@@ -56,6 +63,11 @@ final class PanelViewModel {
     var lastBulkMissingAssetIDs: Set<AssetID> = []
     var now = Date()
     var lastSuccessfulWatchlistBulkAt: Date?
+    var nextAllowedRequestAt: Date?
+    var isShuttingDown = false
+    var highlightedAssetID: AssetID?
+
+    var statusBanner: StatusBannerPresentation? { statusSelector.presentation }
 
     var removalBatchCount: Int { removalBatch.count }
 
@@ -66,8 +78,12 @@ final class PanelViewModel {
         searcher: any AssetSearching,
         priceProvider: any PriceProviding,
         keyValidator: any APIKeyValidating,
+        networkState: any NetworkStateProviding,
         classifier: any StockTokenClassifying,
-        configuration: AppConfiguration = .v1
+        configuration: AppConfiguration = .v1,
+        terminationHandler: @escaping @MainActor @Sendable () -> Void = {
+            NSApplication.shared.terminate(nil)
+        }
     ) {
         self.watchlist = watchlist
         self.cacheStore = cacheStore
@@ -75,8 +91,11 @@ final class PanelViewModel {
         self.searcher = searcher
         self.priceProvider = priceProvider
         self.keyValidator = keyValidator
+        self.networkState = networkState
         self.classifier = classifier
         self.configuration = configuration
+        self.terminationHandler = terminationHandler
+        if !classifier.isAvailable { statusSelector.activate(.classificationUnavailable) }
     }
 
     var canSearch: Bool { configuredKeySuffix != nil && configuredKeyIsValid }
@@ -86,8 +105,11 @@ final class PanelViewModel {
     }
 
     var manualRefreshRemaining: Int {
-        guard let lastSuccessfulWatchlistBulkAt else { return 0 }
-        let deadline = lastSuccessfulWatchlistBulkAt.addingTimeInterval(60)
+        let manualDeadline = lastSuccessfulWatchlistBulkAt?.addingTimeInterval(
+            configuration.manualRefreshCooldown.timeInterval
+        )
+        let deadline = [manualDeadline, nextAllowedRequestAt].compactMap { $0 }.max()
+        guard let deadline else { return 0 }
         return max(0, Int(ceil(deadline.timeIntervalSince(now))))
     }
 
@@ -115,11 +137,14 @@ final class PanelViewModel {
             lastBulkMissingAssetIDs = Set(cache.lastBulkMissingAssetIDs)
             refreshConfiguredKeyStatus()
             if configuredKeySuffix == nil && items.isEmpty { mode = .settings }
-            if await cacheStore.consumeRecoveredCorruption() {
-                bannerMessage = "行情缓存已重置"
+            async let watchlistRecovered = watchlist.consumeRecoveredCorruption()
+            async let cacheRecovered = cacheStore.consumeRecoveredCorruption()
+            let recovered = await (watchlistRecovered, cacheRecovered)
+            if recovered.0 || recovered.1 {
+                statusSelector.activate(.corruptedStore)
             }
         } catch {
-            bannerMessage = "无法读取本地数据"
+            statusSelector.activate(.persistenceFailure)
         }
         isBootstrapping = false
         if isPanelOpen { scheduleOpenRefresh() }
@@ -133,6 +158,7 @@ final class PanelViewModel {
             scheduleOpenRefresh()
             startTimeline()
         } else {
+            isCandidateKeyRevealed = false
             cancelOwnedTasks()
         }
     }
@@ -151,42 +177,65 @@ final class PanelViewModel {
         }
         mode = .search
         guard canSearch else {
-            localMessage = "请先配置 API Key"
+            localMessage = configuredKeySuffix == nil ? "请先配置 API Key" : "API Key 无效"
+            return
+        }
+        if let deadline = nextAllowedRequestAt, deadline > now {
+            localMessage = "请求受限，请稍后再试"
             return
         }
         let generation = searchGeneration
+        launchSearch(trimmed, generation: generation, debounce: true)
+    }
+
+    func retrySearch() {
+        searchGeneration += 1
+        searchTask?.cancel()
+        localMessage = nil
+        searchResults = []
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2, canSearch else { return }
+        if let deadline = nextAllowedRequestAt, deadline > now {
+            localMessage = "请求受限，请稍后再试"
+            return
+        }
+        launchSearch(trimmed, generation: searchGeneration, debounce: false)
+    }
+
+    private func launchSearch(_ query: String, generation: Int, debounce: Bool) {
         isSearching = true
         searchTask = Task { [weak self] in
             do {
-                try await Task.sleep(for: .milliseconds(300))
+                if debounce { try await Task.sleep(for: .milliseconds(300)) }
                 try Task.checkCancellation()
                 guard let self else { return }
-                let rawResults = try await self.searcher.search(query: trimmed)
+                let rawResults = try await self.searcher.search(query: query)
                 try Task.checkCancellation()
                 guard generation == self.searchGeneration else { return }
                 self.searchResults = rawResults.map(self.classified)
                     .sorted { ($0.marketCapRank ?? .max) < ($1.marketCapRank ?? .max) }
                 self.isSearching = false
-                self.bannerMessage = nil
+                self.statusSelector.resolveNetworkFailures()
             } catch is CancellationError {
             } catch {
                 guard let self, generation == self.searchGeneration else { return }
                 self.isSearching = false
-                if (error as? NetworkError) == .unauthorized { self.configuredKeyIsValid = false }
+                if (error as? NetworkError) == .unauthorized {
+                    self.configuredKeyIsValid = false
+                    self.query = ""
+                    self.searchResults = []
+                    self.mode = .settings
+                }
+                self.nextAllowedRequestAt = await self.networkState.nextAllowedRequestAt
                 self.localMessage = self.message(for: error)
-                self.bannerMessage = self.localMessage
+                self.activateNetworkStatus(for: error)
             }
         }
     }
 
-    func retrySearch() {
-        let current = query
-        query = ""
-        query = current
-        queryChanged()
-    }
-
     func add(_ result: SearchResult) async {
+        guard beginLocalMutation() else { return }
+        defer { endLocalMutation() }
         do {
             let existing = items.first { $0.asset.assetID == result.asset.assetID }
             if existing == nil {
@@ -199,23 +248,28 @@ final class PanelViewModel {
             query = ""
             searchResults = []
             mode = .watchlist
-            localMessage = existing == nil ? "已添加" : "已在列表中"
+            completeAdd(
+                assetID: result.asset.assetID,
+                message: existing == nil ? "已添加" : "已在列表中"
+            )
         } catch let error as WatchlistMutationError {
             switch error {
             case .duplicate:
                 query = ""
                 mode = .watchlist
-                localMessage = "已在列表中"
+                completeAdd(assetID: result.asset.assetID, message: "已在列表中")
             case let .watchlistFull(max):
                 localMessage = "关注列表最多 \(max) 项"
             }
         } catch {
             localMessage = "更改未保存"
-            bannerMessage = localMessage
+            statusSelector.activate(.persistenceFailure)
         }
     }
 
     func remove(_ item: WatchlistItem) async {
+        guard beginLocalMutation() else { return }
+        defer { endLocalMutation() }
         do {
             let removed = try await watchlist.remove(id: item.id)
             let quote = quotes[item.asset.assetID]
@@ -226,15 +280,17 @@ final class PanelViewModel {
             do {
                 try await saveCurrentCache()
             } catch {
-                bannerMessage = "行情缓存未保存"
+                statusSelector.activate(.persistenceFailure)
             }
         } catch {
-            bannerMessage = "更改未保存"
+            statusSelector.activate(.persistenceFailure)
         }
     }
 
     func undoRemovalBatch() async {
         guard !removalBatch.isEmpty else { return }
+        guard beginLocalMutation() else { return }
+        defer { endLocalMutation() }
         removalFinalizeTask?.cancel()
         let batch = removalBatch
         do {
@@ -246,15 +302,18 @@ final class PanelViewModel {
             do {
                 try await saveCurrentCache()
             } catch {
-                bannerMessage = "行情缓存未保存"
+                statusSelector.activate(.persistenceFailure)
             }
         } catch {
-            bannerMessage = "撤销未保存"
+            statusSelector.activate(.persistenceFailure)
             scheduleRemovalFinalization()
         }
     }
 
     func move(_ item: WatchlistItem, by offset: Int) async {
+        guard beginLocalMutation() else { return }
+        defer { endLocalMutation() }
+        finalizeRemovalBatch()
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         let destination = index + offset
         guard items.indices.contains(destination) else { return }
@@ -264,7 +323,7 @@ final class PanelViewModel {
             items = try await watchlist.reorder(assetIDs: ids)
         } catch {
             items = await watchlist.snapshot()
-            bannerMessage = "更改未保存"
+            statusSelector.activate(.persistenceFailure)
         }
     }
 
@@ -278,12 +337,14 @@ final class PanelViewModel {
         query = ""
         searchResults = []
         localMessage = nil
+        isCandidateKeyRevealed = false
         mode = .settings
     }
 
     func leaveSettings() {
         validationTask?.cancel()
         isValidatingKey = false
+        isCandidateKeyRevealed = false
         mode = .watchlist
         now = Date()
     }
@@ -304,37 +365,60 @@ final class PanelViewModel {
         do {
             try await keyValidator.validate(candidateKey: candidate)
             try apiKeyStore.saveDemoKey(candidate)
+            await networkState.resetNetworkState()
+            nextAllowedRequestAt = nil
             candidateKey = ""
             localMessage = nil
             refreshConfiguredKeyStatus()
             isValidatingKey = false
             mode = .watchlist
-            bannerMessage = nil
+            statusSelector.resolve(.configuredKeyInvalid)
+            statusSelector.resolve(.missingKey)
+            statusSelector.resolveNetworkFailures()
             if !items.isEmpty {
                 refreshTask?.cancel()
                 refreshTask = Task { [weak self] in await self?.refreshAll() }
             }
         } catch {
             isValidatingKey = false
+            nextAllowedRequestAt = await networkState.nextAllowedRequestAt
             localMessage = message(for: error)
         }
     }
 
-    func removeAPIKey() {
+    func removeAPIKey() async {
         do {
             cancelOwnedNetworkTasks()
             try apiKeyStore.deleteDemoKey()
+            await networkState.resetNetworkState()
+            nextAllowedRequestAt = nil
             configuredKeySuffix = nil
             configuredKeyIsValid = false
+            statusSelector.activate(.missingKey)
             if items.isEmpty { mode = .settings }
         } catch {
             localMessage = "无法删除 API Key"
         }
     }
 
-    func quit() {
+    func beginQuit() {
+        guard !isShuttingDown else { return }
+        isShuttingDown = true
         cancelOwnedTasks()
-        NSApplication.shared.terminate(nil)
+        candidateKey = ""
+        shutdownTask = Task { [weak self] in
+            guard let self else { return }
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: .seconds(2))
+            while self.activeLocalMutationCount > 0, clock.now < deadline {
+                do { try await clock.sleep(for: .milliseconds(25)) } catch { break }
+            }
+            if self.activeLocalMutationCount > 0 {
+                Logger(subsystem: "app.cryptolens", category: "shutdown")
+                    .fault("Timed out waiting for \(self.activeLocalMutationCount) local mutations")
+            }
+            self.terminationHandler()
+        }
     }
 
     func isStale(_ quote: PriceQuote) -> Bool {
@@ -380,13 +464,19 @@ final class PanelViewModel {
                 lastBulkRefreshAt = Date()
                 lastSuccessfulWatchlistBulkAt = lastBulkRefreshAt
             }
-            try await saveCurrentCache()
-            bannerMessage = nil
+            if beginLocalMutation() {
+                defer { endLocalMutation() }
+                try await saveCurrentCache()
+            }
+            statusSelector.resolve(.persistenceFailure)
+            statusSelector.resolveNetworkFailures()
+            statusSelector.resolve(.rateLimited)
             now = Date()
         } catch {
             if (error as? NetworkError) != .cancelled {
                 if (error as? NetworkError) == .unauthorized { configuredKeyIsValid = false }
-                bannerMessage = message(for: error)
+                nextAllowedRequestAt = await networkState.nextAllowedRequestAt
+                activateNetworkStatus(for: error)
             }
         }
     }
@@ -454,6 +544,11 @@ final class PanelViewModel {
             return String(value.suffix(4))
         }
         configuredKeyIsValid = configuredKeySuffix != nil
+        if configuredKeySuffix == nil {
+            statusSelector.activate(.missingKey)
+        } else {
+            statusSelector.resolve(.missingKey)
+        }
     }
 
     private func startTimeline() {
@@ -463,6 +558,10 @@ final class PanelViewModel {
                 do { try await Task.sleep(for: .seconds(30)) } catch { return }
                 guard let self, self.isPanelOpen else { return }
                 self.now = Date()
+                if let deadline = self.nextAllowedRequestAt, deadline <= self.now {
+                    self.nextAllowedRequestAt = nil
+                    self.statusSelector.resolve(.rateLimited)
+                }
             }
         }
     }
@@ -473,6 +572,29 @@ final class PanelViewModel {
             do { try await Task.sleep(for: .seconds(5)) } catch { return }
             self?.removalBatch.removeAll()
         }
+    }
+
+    private func completeAdd(assetID: AssetID, message: String) {
+        localMessage = message
+        highlightedAssetID = assetID
+        highlightTask?.cancel()
+        NSAccessibility.post(
+            element: NSApp as Any,
+            notification: .announcementRequested,
+            userInfo: [
+                .announcement: message,
+                .priority: NSAccessibilityPriorityLevel.high.rawValue
+            ]
+        )
+        highlightTask = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(1_200)) } catch { return }
+            if self?.highlightedAssetID == assetID { self?.highlightedAssetID = nil }
+        }
+    }
+
+    private func finalizeRemovalBatch() {
+        removalFinalizeTask?.cancel()
+        removalBatch.removeAll()
     }
 
     private func cancelOwnedNetworkTasks() {
@@ -488,8 +610,20 @@ final class PanelViewModel {
     private func cancelOwnedTasks() {
         cancelOwnedNetworkTasks()
         timelineTask?.cancel()
+        highlightTask?.cancel()
+        highlightedAssetID = nil
         removalFinalizeTask?.cancel()
-        removalBatch.removeAll()
+        finalizeRemovalBatch()
+    }
+
+    private func beginLocalMutation() -> Bool {
+        guard !isShuttingDown else { return false }
+        activeLocalMutationCount += 1
+        return true
+    }
+
+    private func endLocalMutation() {
+        activeLocalMutationCount = max(0, activeLocalMutationCount - 1)
     }
 
     private func message(for error: Error) -> String {
@@ -504,5 +638,36 @@ final class PanelViewModel {
         case .cancelled: ""
         default: "请求失败，请重试"
         }
+    }
+
+    func acknowledgeStatusEvent() {
+        guard let condition = statusBanner?.condition, condition.isAcknowledgable else { return }
+        statusSelector.resolve(condition)
+    }
+
+    private func activateNetworkStatus(for error: Error) {
+        switch error as? NetworkError {
+        case .unauthorized:
+            statusSelector.activate(.configuredKeyInvalid)
+        case .rateLimited:
+            statusSelector.activate(.rateLimited)
+        case .offline:
+            statusSelector.activate(.offline)
+        case .timeout:
+            statusSelector.activate(.timeout)
+        case .serverError:
+            statusSelector.activate(.serverError)
+        case .cancelled:
+            break
+        default:
+            statusSelector.activate(.refreshFailed)
+        }
+    }
+}
+
+private extension Duration {
+    var timeInterval: TimeInterval {
+        let components = self.components
+        return TimeInterval(components.seconds) + TimeInterval(components.attoseconds) / 1e18
     }
 }

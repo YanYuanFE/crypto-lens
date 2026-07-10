@@ -2,7 +2,12 @@ import Foundation
 import OSLog
 
 protocol StockTokenClassifying: Sendable {
+    var isAvailable: Bool { get }
     func kind(for asset: Asset) -> AssetKind
+}
+
+extension StockTokenClassifying {
+    var isAvailable: Bool { true }
 }
 
 struct CuratedStockTokenClassifier: StockTokenClassifying {

@@ -75,6 +75,24 @@ final class NetworkTests: XCTestCase {
         XCTAssertGreaterThan(try! XCTUnwrap(deadline), Date().addingTimeInterval(10))
     }
 
+    func testResetNetworkStateClearsRateLimitGate() async throws {
+        let client = makeClient(key: "demo-secret")
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 429, body: "{}", headers: ["Retry-After": "60"])
+        }
+        await XCTAssertThrowsErrorAsync(try await client.search(query: "bit")) { _ in }
+
+        await client.resetNetworkState()
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 200, body: #"{"coins":[]}"#)
+        }
+
+        let results = try await client.search(query: "bit")
+        XCTAssertEqual(results, [])
+        let deadline = await client.nextAllowedRequestAt
+        XCTAssertNil(deadline)
+    }
+
     private func makeClient(key: String?) -> CoinGeckoClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]

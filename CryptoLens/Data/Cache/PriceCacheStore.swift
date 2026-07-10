@@ -29,7 +29,7 @@ struct PriceCacheEnvelope: Codable, Hashable, Sendable {
     }
 }
 
-actor PriceCacheStore {
+actor PriceCacheStore: CorruptionRecoveryReporting {
     private let fileURL: URL
     private var recoveredCorruption = false
 
@@ -63,7 +63,7 @@ actor PriceCacheStore {
         try AtomicJSONFile.write(pruned, to: fileURL)
     }
 
-    func consumeRecoveredCorruption() -> Bool {
+    func consumeRecoveredCorruption() async -> Bool {
         defer { recoveredCorruption = false }
         return recoveredCorruption
     }

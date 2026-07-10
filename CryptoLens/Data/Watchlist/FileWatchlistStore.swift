@@ -1,6 +1,6 @@
 import Foundation
 
-actor FileWatchlistStore: WatchlistStoring {
+actor FileWatchlistStore: WatchlistStoring, CorruptionRecoveryReporting {
     private let fileURL: URL
     private var recoveredCorruption = false
 
@@ -26,7 +26,7 @@ actor FileWatchlistStore: WatchlistStoring {
         try AtomicJSONFile.write(items, to: fileURL)
     }
 
-    func consumeRecoveredCorruption() -> Bool {
+    func consumeRecoveredCorruption() async -> Bool {
         defer { recoveredCorruption = false }
         return recoveredCorruption
     }
