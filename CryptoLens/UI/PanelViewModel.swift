@@ -38,6 +38,7 @@ final class PanelViewModel {
     private var highlightTask: Task<Void, Never>?
     private var pendingAddAssetIDs: Set<AssetID> = []
     private var removalBatch: [(entry: RemovedWatchlistEntry, quote: PriceQuote?)] = []
+    private var reorderPreviewBase: [WatchlistItem]?
     private var searchGeneration = 0
     private var isPanelOpen = false
     private var activeLocalMutationCount = 0
@@ -114,14 +115,16 @@ final class PanelViewModel {
     }
 
     var freshnessText: String {
-        if isRefreshing { return "正在更新..." }
-        guard let lastBulkRefreshAt else { return "尚未更新" }
+        if isRefreshing { return String(localized: "正在更新...") }
+        guard let lastBulkRefreshAt else { return String(localized: "尚未更新") }
         let seconds = max(0, now.timeIntervalSince(lastBulkRefreshAt))
-        let relative = seconds < 60 ? "刚刚更新" : "\(Int(seconds / 60)) 分钟前更新"
+        let relative = seconds < 60
+            ? String(localized: "刚刚更新")
+            : String(localized: "\(Int(seconds / 60)) 分钟前更新")
         let currentIDs = Set(items.map(\.asset.assetID))
         let fullyCovered = currentIDs.isSubset(of: lastBulkCoveredAssetIDs)
             && currentIDs.isDisjoint(with: lastBulkMissingAssetIDs)
-        return fullyCovered ? relative : "部分更新 · \(relative)"
+        return fullyCovered ? relative : String(localized: "部分更新 · \(relative)")
     }
 
     func bootstrap() async {
@@ -177,11 +180,13 @@ final class PanelViewModel {
         }
         mode = .search
         guard canSearch else {
-            localMessage = configuredKeySuffix == nil ? "请先配置 API Key" : "API Key 无效"
+            localMessage = configuredKeySuffix == nil
+                ? String(localized: "请先配置 API Key")
+                : String(localized: "API Key 无效")
             return
         }
         if let deadline = nextAllowedRequestAt, deadline > now {
-            localMessage = "请求受限，请稍后再试"
+            localMessage = String(localized: "请求受限，请稍后再试")
             return
         }
         let generation = searchGeneration
@@ -196,7 +201,7 @@ final class PanelViewModel {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2, canSearch else { return }
         if let deadline = nextAllowedRequestAt, deadline > now {
-            localMessage = "请求受限，请稍后再试"
+            localMessage = String(localized: "请求受限，请稍后再试")
             return
         }
         launchSearch(trimmed, generation: searchGeneration, debounce: false)
@@ -241,6 +246,7 @@ final class PanelViewModel {
             if existing == nil {
                 _ = try await watchlist.add(asset: result.asset)
                 items = await watchlist.snapshot()
+                statusSelector.resolve(.persistenceFailure)
                 refreshTask = Task { [weak self] in
                     await self?.refresh(ids: [result.asset.assetID], isBulk: false)
                 }
@@ -250,19 +256,19 @@ final class PanelViewModel {
             mode = .watchlist
             completeAdd(
                 assetID: result.asset.assetID,
-                message: existing == nil ? "已添加" : "已在列表中"
+                message: existing == nil ? String(localized: "已添加") : String(localized: "已在列表中")
             )
         } catch let error as WatchlistMutationError {
             switch error {
             case .duplicate:
                 query = ""
                 mode = .watchlist
-                completeAdd(assetID: result.asset.assetID, message: "已在列表中")
+                completeAdd(assetID: result.asset.assetID, message: String(localized: "已在列表中"))
             case let .watchlistFull(max):
-                localMessage = "关注列表最多 \(max) 项"
+                localMessage = String(localized: "关注列表最多 \(max) 项")
             }
         } catch {
-            localMessage = "更改未保存"
+            localMessage = String(localized: "更改未保存")
             statusSelector.activate(.persistenceFailure)
         }
     }
@@ -272,6 +278,7 @@ final class PanelViewModel {
         defer { endLocalMutation() }
         do {
             let removed = try await watchlist.remove(id: item.id)
+            statusSelector.resolve(.persistenceFailure)
             let quote = quotes[item.asset.assetID]
             items = await watchlist.snapshot()
             quotes[item.asset.assetID] = nil
@@ -295,6 +302,7 @@ final class PanelViewModel {
         let batch = removalBatch
         do {
             items = try await watchlist.restore(batch.map(\.entry))
+            statusSelector.resolve(.persistenceFailure)
             for removed in batch {
                 if let quote = removed.quote { quotes[removed.entry.item.asset.assetID] = quote }
             }
@@ -321,10 +329,48 @@ final class PanelViewModel {
         ids.swapAt(index, destination)
         do {
             items = try await watchlist.reorder(assetIDs: ids)
+            statusSelector.resolve(.persistenceFailure)
         } catch {
             items = await watchlist.snapshot()
             statusSelector.activate(.persistenceFailure)
         }
+    }
+
+    func previewReorder(draggedID: UUID, over targetID: UUID) {
+        guard !isShuttingDown,
+              let source = items.firstIndex(where: { $0.id == draggedID }),
+              let target = items.firstIndex(where: { $0.id == targetID }),
+              source != target else { return }
+        if reorderPreviewBase == nil {
+            finalizeRemovalBatch()
+            reorderPreviewBase = items
+        }
+        let moved = items.remove(at: source)
+        items.insert(moved, at: target)
+    }
+
+    func commitReorderPreview() async {
+        guard reorderPreviewBase != nil else { return }
+        guard beginLocalMutation() else {
+            cancelReorderPreview()
+            return
+        }
+        defer { endLocalMutation() }
+        let ids = items.map(\.asset.assetID)
+        do {
+            items = try await watchlist.reorder(assetIDs: ids)
+            reorderPreviewBase = nil
+            statusSelector.resolve(.persistenceFailure)
+        } catch {
+            items = await watchlist.snapshot()
+            reorderPreviewBase = nil
+            statusSelector.activate(.persistenceFailure)
+        }
+    }
+
+    func cancelReorderPreview() {
+        if let reorderPreviewBase { items = reorderPreviewBase }
+        reorderPreviewBase = nil
     }
 
     func manualRefresh() {
@@ -357,7 +403,7 @@ final class PanelViewModel {
     private func validateAndSaveKey() async {
         let candidate = candidateKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else {
-            localMessage = "请输入 Demo API Key"
+            localMessage = String(localized: "请输入 Demo API Key")
             return
         }
         isValidatingKey = true
@@ -397,7 +443,7 @@ final class PanelViewModel {
             statusSelector.activate(.missingKey)
             if items.isEmpty { mode = .settings }
         } catch {
-            localMessage = "无法删除 API Key"
+            localMessage = String(localized: "无法删除 API Key")
         }
     }
 
@@ -612,6 +658,7 @@ final class PanelViewModel {
         timelineTask?.cancel()
         highlightTask?.cancel()
         highlightedAssetID = nil
+        cancelReorderPreview()
         removalFinalizeTask?.cancel()
         finalizeRemovalBatch()
     }
@@ -628,15 +675,15 @@ final class PanelViewModel {
 
     private func message(for error: Error) -> String {
         switch error as? NetworkError {
-        case .missingAPIKey: "请先配置 API Key"
-        case .unauthorized: "API Key 无效"
-        case .rateLimited: "请求过于频繁，请稍后再试"
-        case .offline: "当前网络不可用"
-        case .timeout: "请求超时"
-        case .serverError: "CoinGecko 暂时不可用"
-        case .decoding: "行情数据格式异常"
+        case .missingAPIKey: String(localized: "请先配置 API Key")
+        case .unauthorized: String(localized: "API Key 无效")
+        case .rateLimited: String(localized: "请求过于频繁，请稍后再试")
+        case .offline: String(localized: "当前网络不可用")
+        case .timeout: String(localized: "请求超时")
+        case .serverError: String(localized: "CoinGecko 暂时不可用")
+        case .decoding: String(localized: "行情数据格式异常")
         case .cancelled: ""
-        default: "请求失败，请重试"
+        default: String(localized: "请求失败，请重试")
         }
     }
 

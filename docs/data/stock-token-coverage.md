@@ -1,18 +1,25 @@
 # Stock Token Coverage
 
-Status: implementation seed, not release-complete.
+Status: release-complete inventory snapshot for the selected v1 issuer scopes.
 
-Verified on 2026-07-10 against the [Ondo available-assets documentation](https://docs.ondo.finance/ondo-stocks/available-assets) and individual CoinGecko asset pages recorded in `CuratedStockTokens.json`.
+Verified on 2026-07-10 against the [Ondo available-assets documentation](https://docs.ondo.finance/ondo-stocks/available-assets), the [Backed xStocks products directory](https://assets.backed.fi/products), and the issuer-specific CoinGecko category inventories recorded below. Each catalog entry also records its exact HTTPS CoinGecko asset page.
+
+## Source Inventory
+
+- Ondo Global Markets: 439 unique CoinGecko IDs from `ondo-tokenized-assets` (`/coins/markets`, 250 rows per page, pages 1-2).
+- Backed xStocks: 132 unique CoinGecko IDs from `xstocks-ecosystem` (`/coins/markets`, 250 rows per page, page 1).
+- Reproduction: `CATALOG_VERIFIED_AT=2026-07-10 ruby scripts/update_stock_token_catalog.rb`.
 
 ## Included
 
-- Ondo Global Markets: 20 high-visibility stocks with confirmed CoinGecko IDs.
-- Backed xStocks: none yet.
+- Ondo Global Markets: all 439 IDs in the verified issuer category snapshot.
+- Backed xStocks: all 132 IDs in the verified issuer category snapshot.
+- Total: 571 unique entries; every entry has a non-empty symbol/name, issuer directory URL, exact CoinGecko page URL, and verification date.
 
 ## Excluded
 
-- The remainder of Ondo's 100+ inventory is pending a reproducible inventory export and per-ID verification.
-- Backed xStocks is pending an authoritative issuer inventory that can be paired with CoinGecko IDs.
-- Entries without both an issuer source and an HTTPS CoinGecko asset page remain deliberately classified as crypto.
+- No known IDs from either selected CoinGecko issuer category were excluded at verification time.
+- Official issuer products not yet indexed in the corresponding CoinGecko category are intentionally excluded because Crypto Lens cannot query them through its v1 data source.
+- Assets added after the verification date require rerunning the updater and reviewing the diff; they remain conservatively classified as crypto until shipped in a later catalog.
 
-The release checklist must remain blocked until the selected issuer scopes are near-complete and every known omission is explained.
+The CI count floors are regression guards, not the completeness definition. Release completeness is established by matching all IDs in both dated category snapshots and documenting the only deliberate exclusion above.

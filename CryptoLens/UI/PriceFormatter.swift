@@ -25,4 +25,18 @@ enum PriceFormatter {
         let sign = number < 0 ? "−" : "+"
         return sign + String(format: "%.2f%%", abs(number))
     }
+
+    static func accessibilityPrice(_ value: Decimal) -> String {
+        var value = value
+        return String(localized: "\(NSDecimalString(&value, Locale(identifier: "en_US_POSIX"))) 美元")
+    }
+
+    static func accessibilityChange(_ value: Decimal?) -> String {
+        guard let value else { return "" }
+        var magnitude = value < 0 ? -value : value
+        let magnitudeText = NSDecimalString(&magnitude, Locale(identifier: "en_US_POSIX"))
+        return value < 0
+            ? String(localized: "24 小时下跌 \(magnitudeText) 百分比")
+            : String(localized: "24 小时上涨 \(magnitudeText) 百分比")
+    }
 }

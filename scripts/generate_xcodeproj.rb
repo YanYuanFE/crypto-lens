@@ -191,7 +191,7 @@ lines << "/* Begin XCBuildConfiguration section */"
 add_build_config(lines, project_debug_id, "Debug", project_settings.merge("DEBUG_INFORMATION_FORMAT" => "dwarf", "GCC_OPTIMIZATION_LEVEL" => "0", "SWIFT_ACTIVE_COMPILATION_CONDITIONS" => "DEBUG", "SWIFT_OPTIMIZATION_LEVEL" => quote("-Onone")))
 add_build_config(lines, project_release_id, "Release", project_settings.merge("DEBUG_INFORMATION_FORMAT" => quote("dwarf-with-dsym"), "SWIFT_COMPILATION_MODE" => "wholemodule"))
 add_build_config(lines, app_debug_id, "Debug", app_settings.merge("ENABLE_TESTABILITY" => "YES"))
-add_build_config(lines, app_release_id, "Release", app_settings)
+add_build_config(lines, app_release_id, "Release", app_settings.merge("CODE_SIGN_INJECT_BASE_ENTITLEMENTS" => "NO"))
 add_build_config(lines, tests_debug_id, "Debug", test_settings)
 add_build_config(lines, tests_release_id, "Release", test_settings)
 lines << "/* End XCBuildConfiguration section */\n"

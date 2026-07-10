@@ -1,9 +1,12 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct RootPanelView: View {
     @Bindable var model: PanelViewModel
+    var bootstrapsOnAppear = true
     @State private var confirmKeyRemoval = false
+    @State private var draggedWatchlistItemID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,12 +52,17 @@ struct RootPanelView: View {
             footer
                 .frame(height: 42)
         }
+        .background(Color(nsColor: .windowBackgroundColor))
         .background {
             PanelWindowObserver { visible in
                 model.panelVisibilityChanged(isVisible: visible)
             }
         }
-        .task { await model.bootstrap() }
+        .task {
+            if bootstrapsOnAppear {
+                await model.bootstrap()
+            }
+        }
         .disabled(model.isShuttingDown)
         .overlay {
             if model.isShuttingDown {
@@ -108,14 +116,14 @@ struct RootPanelView: View {
     }
 
     private var refreshHelp: String {
-        if model.items.isEmpty { return "暂无关注资产" }
-        if model.configuredKeySuffix == nil { return "请先配置 API Key" }
-        if !model.configuredKeyIsValid { return "API Key 无效" }
+        if model.items.isEmpty { return String(localized: "暂无关注资产") }
+        if model.configuredKeySuffix == nil { return String(localized: "请先配置 API Key") }
+        if !model.configuredKeyIsValid { return String(localized: "API Key 无效") }
         if let deadline = model.nextAllowedRequestAt, deadline > model.now {
-            return "请求受限，\(model.manualRefreshRemaining) 秒后可刷新"
+            return String(localized: "请求受限，\(model.manualRefreshRemaining) 秒后可刷新")
         }
-        if model.manualRefreshRemaining > 0 { return "\(model.manualRefreshRemaining) 秒后可刷新" }
-        return "刷新行情"
+        if model.manualRefreshRemaining > 0 { return String(localized: "\(model.manualRefreshRemaining) 秒后可刷新") }
+        return String(localized: "刷新行情")
     }
 
     private func statusBanner(_ banner: StatusBannerPresentation) -> some View {
@@ -180,6 +188,20 @@ struct RootPanelView: View {
                                 remove: { Task { await model.remove(item) } }
                             )
                             .id(item.asset.assetID)
+                            .onDrag {
+                                draggedWatchlistItemID = item.id
+                                return NSItemProvider(object: item.id.uuidString as NSString)
+                            }
+                            .onDrop(
+                                of: [UTType.text],
+                                delegate: WatchlistDropDelegate(
+                                    targetID: item.id,
+                                    draggedID: $draggedWatchlistItemID,
+                                    preview: model.previewReorder,
+                                    cancel: model.cancelReorderPreview,
+                                    commit: { Task { await model.commitReorderPreview() } }
+                                )
+                            )
                             Divider().padding(.leading, 52)
                         }
                     }
@@ -267,6 +289,14 @@ struct RootPanelView: View {
                     Text("股票代币标记来自随包审核目录；行情由 CoinGecko 提供。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    Text("仅供信息，不构成投资建议。股票代币不是传统股票，其结构、权利、价格及可用地区取决于发行方，价格可能偏离标的资产。Crypto Lens 不提供交易服务。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        Link("Backed xStocks", destination: URL(string: "https://assets.backed.fi/products")!)
+                        Link("Ondo Global Markets", destination: URL(string: "https://docs.ondo.finance/ondo-stocks/available-assets")!)
+                    }
+                    .font(.caption)
                 }
             }
             .padding(14)
@@ -288,7 +318,7 @@ struct RootPanelView: View {
                 .disabled(model.mode == .settings)
                 .frame(width: 32)
             Spacer()
-            Link("Data by CoinGecko", destination: URL(string: "https://www.coingecko.com")!)
+            Link("Data by CoinGecko", destination: URL(string: "https://www.coingecko.com/en/api")!)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -311,6 +341,7 @@ private struct WatchlistRow: View {
     let moveUp: () -> Void
     let moveDown: () -> Void
     let remove: () -> Void
+    @State private var isHovering = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -327,6 +358,7 @@ private struct WatchlistRow: View {
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 4))
+                            .accessibilityLabel("股票代币")
                     }
                 }
                 Text(item.asset.name).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -343,25 +375,95 @@ private struct WatchlistRow: View {
                     .frame(minHeight: 14)
             }
             .font(.system(.body, design: .monospaced))
-            Menu("更多", systemImage: "ellipsis") {
-                Button("上移", systemImage: "arrow.up", action: moveUp).disabled(!canMoveUp)
-                Button("下移", systemImage: "arrow.down", action: moveDown).disabled(!canMoveDown)
-                Divider()
-                Button("移除", systemImage: "trash", role: .destructive, action: remove)
+            Group {
+                if isHovering {
+                    Button("移除", systemImage: "trash", role: .destructive, action: remove)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .help("移除")
+                } else {
+                    Menu("更多", systemImage: "ellipsis") {
+                        reorderCommands
+                        Divider()
+                        Button("移除", systemImage: "trash", role: .destructive, action: remove)
+                    }
+                    .labelStyle(.iconOnly)
+                    .menuStyle(.borderlessButton)
+                }
             }
-            .labelStyle(.iconOnly)
-            .menuStyle(.borderlessButton)
             .frame(width: 22)
         }
         .padding(.horizontal, 12)
         .frame(height: 56)
         .background(isHighlighted ? Color.accentColor.opacity(0.14) : Color.clear)
-        .help(isStale ? "行情可能已过时" : item.asset.name)
+        .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
+        .contextMenu {
+            reorderCommands
+            Divider()
+            Button("移除", systemImage: "trash", role: .destructive, action: remove)
+        }
+        .help(tooltip)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var changeColor: Color {
         guard let change = quote?.change24hPercent else { return .secondary }
         return change < 0 ? .red : .green
+    }
+
+    @ViewBuilder
+    private var reorderCommands: some View {
+        Button("上移", systemImage: "arrow.up", action: moveUp).disabled(!canMoveUp)
+        Button("下移", systemImage: "arrow.down", action: moveDown).disabled(!canMoveDown)
+    }
+
+    private var tooltip: String {
+        guard let quote else { return item.asset.name }
+        let stale = isStale ? String(localized: "，行情可能已过时") : ""
+        var price = quote.price
+        let priceText = NSDecimalString(&price, Locale(identifier: "en_US_POSIX"))
+        return String(localized: "\(item.asset.name)：\(priceText) USD\(stale)")
+    }
+
+    private var accessibilityLabel: String {
+        let kind = item.asset.kind == .stockToken ? String(localized: "，股票代币") : ""
+        guard let quote else {
+            return String(localized: "\(item.asset.name)，\(item.asset.symbol)\(kind)，暂无行情")
+        }
+        let stale = isStale ? String(localized: "，行情可能已过时") : ""
+        let price = PriceFormatter.accessibilityPrice(quote.price)
+        let change = PriceFormatter.accessibilityChange(quote.change24hPercent)
+        return String(localized: "\(item.asset.name)，\(item.asset.symbol)\(kind)，\(price)，\(change)\(stale)")
+    }
+}
+
+private struct WatchlistDropDelegate: DropDelegate {
+    let targetID: UUID
+    @Binding var draggedID: UUID?
+    let preview: (UUID, UUID) -> Void
+    let cancel: () -> Void
+    let commit: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let draggedID else { return }
+        preview(draggedID, targetID)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard draggedID != nil else { return false }
+        draggedID = nil
+        commit()
+        return true
+    }
+
+    func dropExited(info: DropInfo) {
+        cancel()
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
     }
 }
 

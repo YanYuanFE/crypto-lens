@@ -29,16 +29,16 @@ enum StatusCondition: Hashable, Sendable {
 
     var message: String {
         switch self {
-        case .persistenceFailure: "更改未保存"
-        case .corruptedStore: "本地数据已重置"
-        case .classificationUnavailable: "股票代币分类暂不可用"
-        case .configuredKeyInvalid: "API Key 无效"
-        case .missingKey: "请先配置 API Key"
-        case .rateLimited: "请求过于频繁，请稍后再试"
-        case .offline: "当前网络不可用"
-        case .timeout: "请求超时"
-        case .serverError: "CoinGecko 暂时不可用"
-        case .refreshFailed: "行情更新失败"
+        case .persistenceFailure: String(localized: "更改未保存")
+        case .corruptedStore: String(localized: "本地数据已重置")
+        case .classificationUnavailable: String(localized: "股票代币分类暂不可用")
+        case .configuredKeyInvalid: String(localized: "API Key 无效")
+        case .missingKey: String(localized: "请先配置 API Key")
+        case .rateLimited: String(localized: "请求过于频繁，请稍后再试")
+        case .offline: String(localized: "当前网络不可用")
+        case .timeout: String(localized: "请求超时")
+        case .serverError: String(localized: "CoinGecko 暂时不可用")
+        case .refreshFailed: String(localized: "行情更新失败")
         }
     }
 

@@ -14,4 +14,9 @@ final class PriceFormatterTests: XCTestCase {
         XCTAssertEqual(PriceFormatter.change(Decimal(string: "-0.32")), "−0.32%")
         XCTAssertEqual(PriceFormatter.change(nil), "")
     }
+
+    func testAccessibilityFormattingDoesNotReadScientificNotation() {
+        XCTAssertEqual(PriceFormatter.accessibilityPrice(Decimal(string: "0.000000123")!), "0.000000123 美元")
+        XCTAssertEqual(PriceFormatter.accessibilityChange(Decimal(string: "-0.32")), "24 小时下跌 0.32 百分比")
+    }
 }

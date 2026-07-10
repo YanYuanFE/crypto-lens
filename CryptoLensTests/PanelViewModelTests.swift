@@ -118,17 +118,57 @@ final class PanelViewModelTests: XCTestCase {
         XCTAssertEqual(model.removalBatchCount, 0)
     }
 
+    func testCancelReorderPreviewRestoresOriginalOrder() async throws {
+        let service = CountingMarketService()
+        let initial = [item("a"), item("b"), item("c")]
+        let model = try makeModel(service: service, items: initial, openDebounce: .milliseconds(10))
+        await model.bootstrap()
+
+        model.previewReorder(draggedID: initial[0].id, over: initial[2].id)
+        XCTAssertEqual(model.items.map(\.id), [initial[1].id, initial[2].id, initial[0].id])
+
+        model.cancelReorderPreview()
+        XCTAssertEqual(model.items.map(\.id), initial.map(\.id))
+    }
+
+    func testSuccessfulWatchlistSaveResolvesPersistenceFailure() async throws {
+        let service = CountingMarketService()
+        let model = try makeModel(
+            service: service,
+            items: [],
+            openDebounce: .milliseconds(10),
+            failSaveCount: 1
+        )
+        await model.bootstrap()
+        let asset = Asset(
+            assetID: AssetID(rawValue: "bitcoin", source: .coinGecko),
+            symbol: "BTC",
+            name: "Bitcoin",
+            kind: .crypto,
+            platform: nil,
+            contractAddress: nil
+        )
+        let result = SearchResult(asset: asset, marketCapRank: 1, thumbURL: nil)
+
+        await model.add(result)
+        XCTAssertEqual(model.statusBanner?.condition, .persistenceFailure)
+
+        await model.add(result)
+        XCTAssertNil(model.statusBanner)
+    }
+
     private func makeModel(
         service: CountingMarketService,
         items: [WatchlistItem],
         openDebounce: Duration,
         saveDelay: Duration = .zero,
+        failSaveCount: Int = 0,
         terminationHandler: @escaping @MainActor @Sendable () -> Void = {}
     ) throws -> PanelViewModel {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        let store = PanelWatchlistStore(items: items, saveDelay: saveDelay)
+        let store = PanelWatchlistStore(items: items, saveDelay: saveDelay, failSaveCount: failSaveCount)
         let configuration = AppConfiguration(
             quoteCurrency: "usd",
             openRefreshDebounce: openDebounce,
@@ -185,15 +225,25 @@ private actor CountingMarketService: AssetSearching, PriceProviding, APIKeyValid
 private actor PanelWatchlistStore: WatchlistStoring {
     private var items: [WatchlistItem]
     private let saveDelay: Duration
-    init(items: [WatchlistItem], saveDelay: Duration = .zero) {
+    private var failSaveCount: Int
+    init(items: [WatchlistItem], saveDelay: Duration = .zero, failSaveCount: Int = 0) {
         self.items = items
         self.saveDelay = saveDelay
+        self.failSaveCount = failSaveCount
     }
     func load() async throws -> [WatchlistItem] { items }
     func save(_ items: [WatchlistItem]) async throws {
         if saveDelay > .zero { try await Task.sleep(for: saveDelay) }
+        if failSaveCount > 0 {
+            failSaveCount -= 1
+            throw PanelStoreError.saveFailed
+        }
         self.items = items
     }
+}
+
+private enum PanelStoreError: Error {
+    case saveFailed
 }
 
 private struct PanelAPIKeyStore: APIKeyStoring {
