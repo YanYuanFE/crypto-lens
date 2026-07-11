@@ -86,10 +86,13 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 
 Repository implementation can be considered code-complete only after the full Debug test suite, localization/scope/asset gates, universal Release build, and snapshot review pass on the current revision. Distribution remains blocked until T52, T54, T55, and T62 external evidence is complete and the remaining Partial rows are checked on the signed installed artifact.
 
+Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be installed and upgraded in `~/Applications` without changing the public distribution status.
+
 ## Current Repository Evidence
 
 - XCTest: 77 passed, 0 failed, 0 skipped on macOS 26.5.1.
 - Repository gates: 73 localization keys, Apple/local/Demo-only scope, and all 10 macOS AppIcon slots passed.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.
 - Visual stress review: Watchlist, Search, and Settings were reviewed at 320/360/380pt; long names truncate while quote, rank, and action columns remain visible.
+- Local Beta: arm64 Release build, ad-hoc Hardened Runtime signature, stable designated requirement, installation, relaunch, and in-place upgrade passed at `~/Applications/CryptoLens.app`.
 - Expected release blocks: preflight rejects the unassigned Release Owner; final evidence requires explicit `READY`; artifact verification rejects non-Developer-ID signing.

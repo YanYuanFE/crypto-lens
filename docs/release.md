@@ -4,6 +4,8 @@ Status: **BLOCKED**
 
 This file is a release gate, not a statement that distribution is currently approved.
 
+The supported no-membership workflow is the personal Local Beta documented in `docs/local-beta.md`. This `BLOCKED` status applies to public binary distribution and does not prevent local builds or upgrades on the developer's Mac.
+
 ## Ownership
 
 - Release Owner: **Unassigned**

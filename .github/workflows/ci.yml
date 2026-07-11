@@ -28,3 +28,10 @@ jobs:
         run: ruby scripts/verify_scope.rb
       - name: Verify icon assets
         run: ruby scripts/verify_assets.rb
+      - name: Verify distribution script syntax
+        run: >-
+          bash -n
+          scripts/build_local_beta.sh
+          scripts/install_local_beta.sh
+          scripts/build_release.sh
+          scripts/verify_release_artifact.sh
