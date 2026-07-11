@@ -69,17 +69,18 @@ actor CoinMarketCapClient: AssetSearching, PriceProviding, NetworkStateProviding
         }
 
         return matches.map { item in
-            SearchResult(
-                asset: Asset(
-                    assetID: AssetID(rawValue: String(item.id), source: .coinMarketCap),
-                    symbol: item.symbol.uppercased(),
-                    name: item.name,
-                    kind: .crypto,
-                    platform: item.platform?.slug,
-                    contractAddress: item.platform?.tokenAddress
-                ),
+            let asset = Asset(
+                assetID: AssetID(rawValue: String(item.id), source: .coinMarketCap),
+                symbol: item.symbol.uppercased(),
+                name: item.name,
+                kind: .crypto,
+                platform: item.platform?.slug,
+                contractAddress: item.platform?.tokenAddress
+            )
+            return SearchResult(
+                asset: asset,
                 marketCapRank: item.rank,
-                thumbURL: nil
+                thumbURL: asset.logoURL
             )
         }
     }
@@ -113,7 +114,8 @@ actor CoinMarketCapClient: AssetSearching, PriceProviding, NetworkStateProviding
                         change24hPercent: item.percentChange24h,
                         fetchedAt: fetchedAt,
                         lastUpdatedAt: item.lastUpdated.flatMap(Self.parseDate),
-                        source: .coinMarketCap
+                        source: .coinMarketCap,
+                        logoURL: Asset.coinMarketCapLogoURL(for: String(item.id))
                     )
                 }
             }

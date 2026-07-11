@@ -21,6 +21,10 @@ final class NetworkTests: XCTestCase {
         XCTAssertEqual(results.count, 1)
         XCTAssertEqual(results[0].asset.assetID, AssetID(rawValue: "1", source: .coinMarketCap))
         XCTAssertEqual(results[0].marketCapRank, 1)
+        XCTAssertEqual(
+            results[0].thumbURL?.absoluteString,
+            "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png"
+        )
     }
 
     func testSearchUsesCMCHeaderAndKeyedBase() async throws {
@@ -59,6 +63,10 @@ final class NetworkTests: XCTestCase {
         XCTAssertEqual(quotes[0].change24hPercent, Decimal(string: "2.5"))
         XCTAssertEqual(quotes[0].source, .coinMarketCap)
         XCTAssertNotNil(quotes[0].lastUpdatedAt)
+        XCTAssertEqual(
+            quotes[0].logoURL?.absoluteString,
+            "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png"
+        )
     }
 
     func testLegacyCoinGeckoSlugResolvesThroughCMCMap() async throws {

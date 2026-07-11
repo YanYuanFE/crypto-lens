@@ -89,6 +89,7 @@ struct RootPanelView: View {
                     .labelStyle(.iconOnly)
                     .help("返回关注列表")
                 Text("设置").font(.headline)
+                Spacer(minLength: 0)
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.mode == .search ? "搜索资产" : "Crypto Lens")
@@ -110,9 +111,9 @@ struct RootPanelView: View {
                         }
                 }
             }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var refreshHelp: String {
@@ -353,10 +354,10 @@ private struct WatchlistRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: item.asset.kind == .stockToken ? "building.columns" : "bitcoinsign.circle")
-                .font(.title3)
-                .frame(width: 28)
-                .foregroundStyle(.secondary)
+            AssetLogo(
+                url: quote?.logoURL ?? item.asset.logoURL,
+                fallbackSystemName: item.asset.kind == .stockToken ? "building.columns" : "bitcoinsign.circle"
+            )
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(item.asset.symbol).font(.system(.body, design: .rounded).weight(.semibold))
@@ -484,10 +485,7 @@ private struct SearchResultRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            AsyncImage(url: result.thumbURL) { image in image.resizable().scaledToFit() } placeholder: {
-                Image(systemName: "circle.dotted")
-            }
-            .frame(width: 28, height: 28)
+            AssetLogo(url: result.thumbURL, fallbackSystemName: "circle.dotted")
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(result.asset.symbol).fontWeight(.semibold)
@@ -506,6 +504,25 @@ private struct SearchResultRow: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 52)
+    }
+}
+
+private struct AssetLogo: View {
+    let url: URL?
+    let fallbackSystemName: String
+
+    var body: some View {
+        AsyncImage(url: url) { image in
+            image
+                .resizable()
+                .scaledToFit()
+                .clipShape(Circle())
+        } placeholder: {
+            Image(systemName: fallbackSystemName)
+                .font(.title3)
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 28, height: 28)
     }
 }
 

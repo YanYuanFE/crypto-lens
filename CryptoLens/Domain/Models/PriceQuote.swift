@@ -8,6 +8,7 @@ struct PriceQuote: Hashable, Codable, Sendable {
     let fetchedAt: Date
     let lastUpdatedAt: Date?
     let source: PriceSource
+    let logoURL: URL?
 
     private enum CodingKeys: String, CodingKey {
         case assetID
@@ -17,6 +18,7 @@ struct PriceQuote: Hashable, Codable, Sendable {
         case fetchedAt
         case lastUpdatedAt
         case source
+        case logoURL
     }
 
     init(
@@ -26,7 +28,8 @@ struct PriceQuote: Hashable, Codable, Sendable {
         change24hPercent: Decimal?,
         fetchedAt: Date,
         lastUpdatedAt: Date?,
-        source: PriceSource
+        source: PriceSource,
+        logoURL: URL? = nil
     ) {
         self.assetID = assetID
         self.currency = currency
@@ -35,6 +38,7 @@ struct PriceQuote: Hashable, Codable, Sendable {
         self.fetchedAt = fetchedAt
         self.lastUpdatedAt = lastUpdatedAt
         self.source = source
+        self.logoURL = logoURL
     }
 
     init(from decoder: Decoder) throws {
@@ -46,6 +50,7 @@ struct PriceQuote: Hashable, Codable, Sendable {
         fetchedAt = try container.decode(Date.self, forKey: .fetchedAt)
         lastUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .lastUpdatedAt)
         source = try container.decode(PriceSource.self, forKey: .source)
+        logoURL = try container.decodeIfPresent(URL.self, forKey: .logoURL)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -57,6 +62,7 @@ struct PriceQuote: Hashable, Codable, Sendable {
         try container.encode(fetchedAt, forKey: .fetchedAt)
         try container.encodeIfPresent(lastUpdatedAt, forKey: .lastUpdatedAt)
         try container.encode(source, forKey: .source)
+        try container.encodeIfPresent(logoURL, forKey: .logoURL)
     }
 
     private static func string(from value: Decimal) -> String {

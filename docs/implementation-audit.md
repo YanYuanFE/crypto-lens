@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R56
+Specification: `docs/design/macos-menu-bar-app.md` R57
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -43,14 +43,14 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T26 | Verified | Multi-removal batch restores original order and quotes |
 | T27 | Verified | Interleaved Add/Undo and reorder-finalizes-batch tests |
 | T28 | Partial | Shared reorder command and persistence rollback are tested; drag/menu/VoiceOver interaction needs manual UI verification |
-| T29 | Partial | 320/360/380 snapshot stress coverage exists; final hover, tooltip, VoiceOver, and visual overlap review remains |
+| T29 | Partial | 320/360/380 snapshot stress coverage exists; header refresh is right-aligned; final hover, tooltip, VoiceOver, and visual overlap review remains |
 | T30 | Verified | Boundary, scientific notation, sign, nil-change, and accessibility formatter tests |
 | T31 | Verified | Injected-clock stale timeline test proves no price polling and stop-on-close |
 | T32 | Verified | `StatusSelectorTests` priority, recovery, and acknowledgement coverage |
 | T33 | Verified | Network/persistence/key recovery and one-time corruption/classification behavior tests |
 | T34 | Deferred | All keyboard operations deferred by product decision |
 | T35 | Deferred | All keyboard operations deferred by product decision |
-| T36 | Partial | Search-row stress snapshots include long labels and missing rank; final visual/a11y review remains |
+| T36 | Partial | Search-row stress snapshots include long labels, missing rank, and fixed logo slots; final visual/a11y review remains |
 | T37 | Verified | Query identity, immediate result clearing, cancellation, and generation tests |
 | T38 | Verified | Search retry, failure recovery, 429 disablement, and 401-to-Settings tests |
 | T39 | Partial | Mode/disable/progress logic is implemented, including no-key availability; tooltip and live in-flight presentation need manual UI verification |
@@ -90,7 +90,7 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 
 ## Current Repository Evidence
 
-- XCTest: 81 passed, 0 failed, 0 skipped on macOS 26.5.1.
+- XCTest: 82 passed, 0 failed, 0 skipped on macOS 26.5.1.
 - Repository gates: 74 extracted localization keys, Apple/local/CoinMarketCap scope, and all 10 macOS AppIcon slots passed.
 - Live CMC Keyless smoke: unauthenticated `/v1/cryptocurrency/map?symbol=BTC` and `/v1/simple/price?ids=1` returned valid CMC envelopes and Bitcoin data.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.

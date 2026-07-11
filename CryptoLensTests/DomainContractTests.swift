@@ -23,4 +23,21 @@ final class DomainContractTests: XCTestCase {
 
         XCTAssertEqual(decoded, original)
     }
+
+    func testCoinMarketCapAssetBuildsOfficialLogoURL() {
+        let asset = Asset(
+            assetID: AssetID(rawValue: "1", source: .coinMarketCap),
+            symbol: "BTC",
+            name: "Bitcoin",
+            kind: .crypto,
+            platform: nil,
+            contractAddress: nil
+        )
+
+        XCTAssertEqual(
+            asset.logoURL?.absoluteString,
+            "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png"
+        )
+        XCTAssertNil(Asset.coinMarketCapLogoURL(for: "bitcoin"))
+    }
 }
