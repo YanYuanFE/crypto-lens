@@ -127,8 +127,6 @@ final class PanelSnapshotTests: XCTestCase {
             kind: .stockToken
         )
         model.isBootstrapping = false
-        model.configuredKeySuffix = "1234"
-        model.configuredKeyIsValid = true
         model.items = [
             WatchlistItem(id: UUID(), asset: bitcoin, sortOrder: 0, addedAt: Date()),
             WatchlistItem(id: UUID(), asset: apple, sortOrder: 1, addedAt: Date())

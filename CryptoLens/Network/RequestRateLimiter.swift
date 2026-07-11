@@ -1,16 +1,16 @@
 import Foundation
 
 actor RequestRateLimiter {
-    private let minimumInterval: TimeInterval
+    private let defaultMinimumInterval: TimeInterval
     private let clock = ContinuousClock()
     private var lastRequestAt: ContinuousClock.Instant?
     private(set) var nextAllowedRequestAt: Date?
 
     init(minimumInterval: Duration) {
-        self.minimumInterval = minimumInterval.timeInterval
+        self.defaultMinimumInterval = minimumInterval.timeInterval
     }
 
-    func acquire() async throws {
+    func acquire(minimumInterval: Duration? = nil) async throws {
         try Task.checkCancellation()
 
         if let deadline = nextAllowedRequestAt, deadline > Date() {
@@ -19,7 +19,8 @@ actor RequestRateLimiter {
         nextAllowedRequestAt = nil
 
         if let lastRequestAt {
-            let deadline = lastRequestAt.advanced(by: .seconds(minimumInterval))
+            let interval = minimumInterval?.timeInterval ?? defaultMinimumInterval
+            let deadline = lastRequestAt.advanced(by: .seconds(interval))
             if deadline > clock.now {
                 try await clock.sleep(until: deadline)
             }

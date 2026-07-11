@@ -37,4 +37,4 @@ abort "Info.plist must declare LSUIElement" unless File.read(info_path).match?(/
 abort "Deployment target must remain macOS 14.0" unless File.read(project_path).include?("MACOSX_DEPLOYMENT_TARGET = 14.0")
 abort "Release must not inject base entitlements" unless File.read(project_path).include?("CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO")
 
-puts "Scope gate passed: Apple-only, local-only, Demo-only menu bar app"
+puts "Scope gate passed: Apple-only, local-only, Keyless/Demo menu bar app"

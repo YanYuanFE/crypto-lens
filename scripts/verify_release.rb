@@ -4,6 +4,7 @@ release_path = File.expand_path("../docs/release.md", __dir__)
 release = File.read(release_path)
 
 required_urls = %w[
+  https://docs.coingecko.com/docs/keyless-public-api
   https://www.coingecko.com/en/api_terms
   https://www.coingecko.com/en/terms
   https://www.coingecko.com/en/api/pricing

@@ -120,6 +120,7 @@ final class PanelViewModelTests: XCTestCase {
         XCTAssertEqual(model.mode, .settings)
         XCTAssertEqual(model.query, "")
         XCTAssertFalse(model.configuredKeyIsValid)
+        XCTAssertTrue(model.canSearch)
         XCTAssertEqual(model.statusBanner?.condition, .configuredKeyInvalid)
     }
 
@@ -222,7 +223,7 @@ final class PanelViewModelTests: XCTestCase {
         model.panelVisibilityChanged(isVisible: false)
     }
 
-    func testSetupRequiredReentersSettingsOnEveryOpenUntilKeyExists() async throws {
+    func testKeylessEmptyWatchlistStaysUsableAcrossPanelOpens() async throws {
         let service = CountingMarketService()
         let keyStore = RecordingAPIKeyStore(key: nil)
         let model = try makeModel(
@@ -232,21 +233,19 @@ final class PanelViewModelTests: XCTestCase {
             keyStore: keyStore
         )
         await model.bootstrap()
-        XCTAssertEqual(model.mode, .settings)
-        XCTAssertEqual(model.statusBanner?.condition, .missingKey)
-
-        model.leaveSettings()
         XCTAssertEqual(model.mode, .watchlist)
+        XCTAssertTrue(model.canSearch)
+        XCTAssertNil(model.statusBanner)
+
         model.panelVisibilityChanged(isVisible: true)
-        XCTAssertEqual(model.mode, .settings)
-        model.leaveSettings()
+        XCTAssertEqual(model.mode, .watchlist)
         model.panelVisibilityChanged(isVisible: false)
         model.panelVisibilityChanged(isVisible: true)
-        XCTAssertEqual(model.mode, .settings)
+        XCTAssertEqual(model.mode, .watchlist)
         model.panelVisibilityChanged(isVisible: false)
     }
 
-    func testMissingKeyWithHistoryStaysInWatchlistAndDisablesSearch() async throws {
+    func testKeylessHistoryRefreshesOnOpenAndKeepsSearchEnabled() async throws {
         let service = CountingMarketService()
         let model = try makeModel(
             service: service,
@@ -255,10 +254,15 @@ final class PanelViewModelTests: XCTestCase {
             keyStore: RecordingAPIKeyStore(key: nil)
         )
         await model.bootstrap()
+        model.panelVisibilityChanged(isVisible: true)
+        try await Task.sleep(for: .milliseconds(40))
 
         XCTAssertEqual(model.mode, .watchlist)
-        XCTAssertFalse(model.canSearch)
-        XCTAssertEqual(model.statusBanner?.condition, .missingKey)
+        XCTAssertTrue(model.canSearch)
+        XCTAssertNil(model.statusBanner)
+        let requestCount = await service.priceRequestCount
+        XCTAssertEqual(requestCount, 1)
+        model.panelVisibilityChanged(isVisible: false)
     }
 
     func testAddWhileClosedPersistsAndCompletesWithoutNetworkRequest() async throws {
@@ -454,7 +458,9 @@ final class PanelViewModelTests: XCTestCase {
         XCTAssertEqual(model.items.map(\.id), [bitcoin.id])
         XCTAssertEqual(model.quotes[bitcoin.asset.assetID]?.price, Decimal(string: "10"))
         XCTAssertEqual(model.mode, .watchlist)
-        XCTAssertEqual(model.statusBanner?.condition, .missingKey)
+        XCTAssertNil(model.statusBanner)
+        XCTAssertTrue(model.canSearch)
+        XCTAssertTrue(model.canManualRefresh)
     }
 
     func testRemoveAPIKeyFailurePreservesConfiguredState() async throws {
@@ -954,6 +960,7 @@ final class PanelViewModelTests: XCTestCase {
             quoteCurrency: "usd",
             openRefreshDebounce: openDebounce,
             manualRefreshCooldown: .seconds(60),
+            keylessMinimumRequestInterval: .seconds(3),
             demoMinimumRequestInterval: .milliseconds(750),
             staleTimelineInterval: staleTimelineInterval,
             shutdownDrainTimeout: shutdownDrainTimeout,

@@ -104,14 +104,12 @@ final class PanelViewModel {
         if !classifier.isAvailable { statusSelector.activate(.classificationUnavailable) }
     }
 
-    private var hasUsableConfiguredKey: Bool { configuredKeySuffix != nil && configuredKeyIsValid }
-
     var canSearch: Bool {
-        hasUsableConfiguredKey && !(nextAllowedRequestAt.map { $0 > now } ?? false)
+        !(nextAllowedRequestAt.map { $0 > now } ?? false)
     }
 
     var canManualRefresh: Bool {
-        !items.isEmpty && configuredKeySuffix != nil && configuredKeyIsValid && !isRefreshing && manualRefreshRemaining == 0
+        !items.isEmpty && !isRefreshing && manualRefreshRemaining == 0
     }
 
     var manualRefreshRemaining: Int {
@@ -148,7 +146,6 @@ final class PanelViewModel {
             lastBulkCoveredAssetIDs = Set(cache.lastBulkCoveredAssetIDs)
             lastBulkMissingAssetIDs = Set(cache.lastBulkMissingAssetIDs)
             refreshConfiguredKeyStatus()
-            if configuredKeySuffix == nil && items.isEmpty { mode = .settings }
             async let watchlistRecovered = watchlist.consumeRecoveredCorruption()
             async let cacheRecovered = cacheStore.consumeRecoveredCorruption()
             let recovered = await (watchlistRecovered, cacheRecovered)
@@ -167,9 +164,6 @@ final class PanelViewModel {
         isPanelOpen = isVisible
         if isVisible {
             updatePresentationTime(nowProvider())
-            if !isBootstrapping, configuredKeySuffix == nil, items.isEmpty {
-                mode = .settings
-            }
             scheduleOpenRefresh()
             startTimeline()
         } else {
@@ -191,12 +185,6 @@ final class PanelViewModel {
             return
         }
         mode = .search
-        guard hasUsableConfiguredKey else {
-            localMessage = configuredKeySuffix == nil
-                ? String(localized: "请先配置 API Key")
-                : String(localized: "API Key 无效")
-            return
-        }
         if let deadline = nextAllowedRequestAt, deadline > now {
             localMessage = String(localized: "请求受限，请稍后再试")
             return
@@ -211,7 +199,7 @@ final class PanelViewModel {
         localMessage = nil
         searchResults = []
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 2, hasUsableConfiguredKey else { return }
+        guard trimmed.count >= 2 else { return }
         if let deadline = nextAllowedRequestAt, deadline > now {
             localMessage = String(localized: "请求受限，请稍后再试")
             return
@@ -442,7 +430,6 @@ final class PanelViewModel {
             isValidatingKey = false
             mode = .watchlist
             statusSelector.resolve(.configuredKeyInvalid)
-            statusSelector.resolve(.missingKey)
             statusSelector.resolveNetworkFailures()
             if !items.isEmpty {
                 openTask?.cancel()
@@ -468,8 +455,7 @@ final class PanelViewModel {
             nextAllowedRequestAt = nil
             configuredKeySuffix = nil
             configuredKeyIsValid = false
-            statusSelector.activate(.missingKey)
-            if items.isEmpty { mode = .settings }
+            statusSelector.resolve(.configuredKeyInvalid)
         } catch {
             localMessage = String(localized: "无法删除 API Key")
         }
@@ -521,7 +507,7 @@ final class PanelViewModel {
     }
 
     private func refresh(ids: [AssetID], isBulk: Bool) async {
-        guard isPanelOpen, !ids.isEmpty, configuredKeySuffix != nil, configuredKeyIsValid else { return }
+        guard isPanelOpen, !ids.isEmpty else { return }
         if isRefreshing {
             if !isBulk { pendingAddAssetIDs.formUnion(ids) }
             return
@@ -649,11 +635,6 @@ final class PanelViewModel {
             return String(value.suffix(4))
         }
         configuredKeyIsValid = configuredKeySuffix != nil
-        if configuredKeySuffix == nil {
-            statusSelector.activate(.missingKey)
-        } else {
-            statusSelector.resolve(.missingKey)
-        }
     }
 
     private func startTimeline() {
@@ -734,7 +715,7 @@ final class PanelViewModel {
 
     private func message(for error: Error) -> String {
         switch error as? NetworkError {
-        case .missingAPIKey: String(localized: "请先配置 API Key")
+        case .missingAPIKey: String(localized: "请输入 Demo API Key")
         case .unauthorized: String(localized: "API Key 无效")
         case .rateLimited: String(localized: "请求过于频繁，请稍后再试")
         case .offline: String(localized: "当前网络不可用")

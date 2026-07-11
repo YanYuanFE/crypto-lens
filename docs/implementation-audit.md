@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R54  
+Specification: `docs/design/macos-menu-bar-app.md` R55
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -26,7 +26,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T9 | Verified | Bulk soft-miss tests in `NetworkTests` and `PanelViewModelTests` |
 | T10 | Verified | `PanelViewModelTests.testStaleBoundaryUsesFetchedAtAndCurrentPresentationTime` |
 | T11 | Verified | Open debounce, stable-open, and close-before-debounce tests in `PanelViewModelTests` |
-| T12 | Verified | `NetworkTests.testMissingKeyDoesNotCreateHTTPRequest` plus setup-state tests |
+| T12 | Verified | Keyless network tests require HTTP without Demo/Pro headers; live `/simple/price` and `/search` smoke passed without a key |
 | T13 | Verified | Search/open/price cancellation and retry-sleep cancellation tests |
 | T14 | Verified | Bootstrap race and empty-watchlist open tests |
 | T15 | Verified | Closed-panel Add and in-flight Add coalescing tests |
@@ -35,7 +35,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T18 | Partial | Query-driven Watchlist/Search transitions are tested; Esc is deferred with T34/T35 |
 | T19 | Verified | Add success, duplicate selection, and full/save-failure state tests |
 | T20 | Verified | Entering Settings cancels search and leaves through the same panel model without a refresh |
-| T21 | Verified | Repeated setup-required open and historical-list-without-key tests |
+| T21 | Verified | Empty and historical Watchlists remain usable without a key; historical lists refresh on open through Keyless |
 | T22 | Verified | Candidate validation and failed-commit preservation tests |
 | T23 | Verified | Candidate errors do not commit; quit discards in-memory candidate |
 | T24 | Verified | Successful key commit replaces pending or in-flight old-key refresh and performs one full-list refresh |
@@ -53,16 +53,16 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T36 | Partial | Search-row stress snapshots include long labels and missing rank; final visual/a11y review remains |
 | T37 | Verified | Query identity, immediate result clearing, cancellation, and generation tests |
 | T38 | Verified | Search retry, failure recovery, 429 disablement, and 401-to-Settings tests |
-| T39 | Partial | Mode/disable/progress logic is implemented; tooltip and live in-flight presentation need manual UI verification |
+| T39 | Partial | Mode/disable/progress logic is implemented, including no-key availability; tooltip and live in-flight presentation need manual UI verification |
 | T40 | Verified | Open/manual/key bulk cooldown rules, failure exclusions, and open-bypass behavior are covered |
 | T41 | Partial | Fixed production frame and stress-width snapshots exist; banner/Undo live geometry needs final visual verification |
 | T42 | Verified | Cache-first bulk success, soft-miss, and failure-preservation tests |
 | T43 | Verified | Bulk metadata, partial freshness, Add-price isolation, and stale timeline tests |
 | T44 | Partial | Frozen kind/classifier behavior and stock-token snapshot data are covered; final badge color/a11y review remains |
 | T45 | Verified | Catalog schema/count/fixture gate and unavailable-catalog fallback tests |
-| T46 | Partial | Empty state and batch Undo behavior are implemented; delete-last/Undo live visual check remains |
+| T46 | Partial | Keyless empty state and batch Undo behavior are implemented; delete-last/Undo live visual check remains |
 | T47 | Verified | Full-list race and existing-result selection behavior tests |
-| T48 | Partial | Success/failure state preservation is tested; destructive confirmation interaction needs manual UI verification |
+| T48 | Partial | Success/failure state preservation and return to Keyless are tested; destructive confirmation interaction needs manual UI verification |
 | T49 | Partial | Fixed footer implementation is snapshot-covered; external-link close cleanup and live layout need manual verification |
 | T50 | Verified | Local-drain success and configurable 2-second timeout termination tests |
 | T51 | Partial | Mask/remask and candidate lifecycle tests exist; final VoiceOver/log privacy inspection remains |
@@ -72,7 +72,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T55 | Partial | `verify_assets.rb` validates all ten AppIcon slots; status-item visual states and installed Finder/Gatekeeper appearance remain manual/external |
 | T56 | Partial | String Catalog extraction gate covers all visible keys and stress snapshots cover long text; final live truncation/a11y review remains |
 | T57 | Verified | USD request, validation, cache-envelope, configuration, and formatter gates |
-| T58 | Verified | `verify_scope.rb` rejects Pro endpoints/headers; network tests require Demo endpoint/header and no keyless request |
+| T58 | Verified | Scope gate rejects Pro; tests cover no-header Keyless, Demo header, candidate isolation, and stored-key 401 fallback on the next action |
 | T59 | Partial | Single icon-only `MenuBarExtra` is scope-gated; final status-item accessibility/selected-state check remains manual |
 | T60 | Verified | `verify_scope.rb` rejects notifications and background-task APIs/entitlements |
 | T61 | Verified | Local Application Support stores plus CloudKit/iCloud negative scope gate |
@@ -90,8 +90,9 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 
 ## Current Repository Evidence
 
-- XCTest: 77 passed, 0 failed, 0 skipped on macOS 26.5.1.
-- Repository gates: 73 localization keys, Apple/local/Demo-only scope, and all 10 macOS AppIcon slots passed.
+- XCTest: 79 passed, 0 failed, 0 skipped on macOS 26.5.1.
+- Repository gates: 74 extracted localization keys, Apple/local/Keyless+Demo scope, and all 10 macOS AppIcon slots passed.
+- Live Keyless smoke: unauthenticated `/simple/price` returned Bitcoin USD and `/search` returned 25 results with Bitcoin first.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.
 - Visual stress review: Watchlist, Search, and Settings were reviewed at 320/360/380pt; long names truncate while quote, rank, and action columns remain visible.
 - Local Beta: arm64 Release build, ad-hoc Hardened Runtime signature, stable designated requirement, installation, relaunch, and in-place upgrade passed at `~/Applications/CryptoLens.app`.

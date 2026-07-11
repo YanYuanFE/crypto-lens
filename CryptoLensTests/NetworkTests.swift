@@ -8,16 +8,17 @@ final class NetworkTests: XCTestCase {
         super.tearDown()
     }
 
-    func testMissingKeyDoesNotCreateHTTPRequest() async {
+    func testMissingKeyUsesKeylessRequestWithoutAuthenticationHeader() async throws {
         let client = makeClient(key: nil)
-        URLProtocolStub.handler = { _ in
-            XCTFail("Missing key must not send HTTP")
-            throw URLError(.badServerResponse)
+        URLProtocolStub.handler = { request in
+            XCTAssertNil(request.value(forHTTPHeaderField: "x-cg-demo-api-key"))
+            XCTAssertNil(request.value(forHTTPHeaderField: "x-cg-pro-api-key"))
+            XCTAssertEqual(request.url?.path, "/api/v3/search")
+            return Self.response(request, status: 200, body: #"{"coins":[]}"#)
         }
 
-        await XCTAssertThrowsErrorAsync(try await client.search(query: "bit")) { error in
-            XCTAssertEqual(error as? NetworkError, .missingAPIKey)
-        }
+        let results = try await client.search(query: "bit")
+        XCTAssertEqual(results, [])
     }
 
     func testSearchUsesDemoHeaderAndDecodesResults() async throws {
@@ -82,7 +83,7 @@ final class NetworkTests: XCTestCase {
     }
 
     func testRateLimitGateAppliesAcrossSearchAndPriceWithoutAutomaticRetry() async {
-        let client = makeClient(key: "demo-secret")
+        let client = makeClient(key: nil)
         let recorder = RequestRecorder()
         URLProtocolStub.handler = { request in
             recorder.record(request)
@@ -123,6 +124,32 @@ final class NetworkTests: XCTestCase {
         await XCTAssertThrowsErrorAsync(try await waitingTask.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
+
+        let dynamicLimiter = RequestRateLimiter(minimumInterval: .zero)
+        try await dynamicLimiter.acquire()
+        let dynamicStartedAt = Date()
+        try await dynamicLimiter.acquire(minimumInterval: .milliseconds(100))
+        XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(dynamicStartedAt), 0.08)
+    }
+
+    func testUnauthorizedStoredKeyFallsBackToKeylessOnNextUserAction() async throws {
+        let client = makeClient(key: "expired-key")
+        let recorder = RequestRecorder()
+        URLProtocolStub.handler = { request in
+            recorder.record(request)
+            if recorder.count == 1 {
+                return Self.response(request, status: 401, body: "{}")
+            }
+            return Self.response(request, status: 200, body: #"{"coins":[]}"#)
+        }
+
+        await XCTAssertThrowsErrorAsync(try await client.search(query: "bit")) { error in
+            XCTAssertEqual(error as? NetworkError, .unauthorized)
+        }
+        let results = try await client.search(query: "eth")
+
+        XCTAssertEqual(results, [])
+        XCTAssertEqual(recorder.demoAPIKeys, ["expired-key", nil])
     }
 
     func testCandidateValidationUsesExplicitKeyAndRequiresBitcoinUSD() async throws {
@@ -146,6 +173,25 @@ final class NetworkTests: XCTestCase {
                 return XCTFail("Expected decoding failure, got \(error)")
             }
         }
+    }
+
+    func testUnauthorizedCandidateDoesNotDisableStoredDemoKey() async throws {
+        let client = makeClient(key: "stored-key")
+        let recorder = RequestRecorder()
+        URLProtocolStub.handler = { request in
+            recorder.record(request)
+            if recorder.count == 1 {
+                return Self.response(request, status: 401, body: "{}")
+            }
+            return Self.response(request, status: 200, body: #"{"coins":[]}"#)
+        }
+
+        await XCTAssertThrowsErrorAsync(try await client.validate(candidateKey: "bad-candidate")) { error in
+            XCTAssertEqual(error as? NetworkError, .unauthorized)
+        }
+        _ = try await client.search(query: "bit")
+
+        XCTAssertEqual(recorder.demoAPIKeys, ["bad-candidate", "stored-key"])
     }
 
     func testResetNetworkStateClearsRateLimitGate() async throws {
@@ -172,7 +218,13 @@ final class NetworkTests: XCTestCase {
         return CoinGeckoClient(
             apiKeyStore: MemoryAPIKeyStore(key: key),
             session: URLSession(configuration: configuration),
-            rateLimiter: RequestRateLimiter(minimumInterval: .zero)
+            rateLimiter: RequestRateLimiter(minimumInterval: .zero),
+            configuration: APIConfiguration(
+                baseURL: URL(string: "https://api.coingecko.com/api/v3")!,
+                demoAPIKeyHeaderName: "x-cg-demo-api-key",
+                keylessMinimumRequestInterval: .zero,
+                demoMinimumRequestInterval: .zero
+            )
         )
     }
 
@@ -238,6 +290,9 @@ private final class RequestRecorder: @unchecked Sendable {
     private var requests: [URLRequest] = []
 
     var count: Int { lock.withLock { requests.count } }
+    var demoAPIKeys: [String?] {
+        lock.withLock { requests.map { $0.value(forHTTPHeaderField: "x-cg-demo-api-key") } }
+    }
 
     func record(_ request: URLRequest) {
         lock.withLock { requests.append(request) }

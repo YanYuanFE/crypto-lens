@@ -117,8 +117,6 @@ struct RootPanelView: View {
 
     private var refreshHelp: String {
         if model.items.isEmpty { return String(localized: "暂无关注资产") }
-        if model.configuredKeySuffix == nil { return String(localized: "请先配置 API Key") }
-        if !model.configuredKeyIsValid { return String(localized: "API Key 无效") }
         if let deadline = model.nextAllowedRequestAt, deadline > model.now {
             return String(localized: "请求受限，\(model.manualRefreshRemaining) 秒后可刷新")
         }
@@ -246,18 +244,28 @@ struct RootPanelView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("CoinGecko Demo API Key").font(.headline)
+                    Text("CoinGecko API").font(.headline)
                     if let suffix = model.configuredKeySuffix {
-                        Label("已配置 ····\(suffix)", systemImage: "checkmark.circle.fill")
+                        if model.configuredKeyIsValid {
+                            Label("Demo Key 已配置 ····\(suffix)", systemImage: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Label("Demo Key 无效 · 当前使用免 Key", systemImage: "exclamationmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Label("当前使用免 Key 公共 API", systemImage: "network")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     HStack(spacing: 6) {
                         Group {
                             if model.isCandidateKeyRevealed {
-                                TextField("输入新的 Demo API Key", text: $model.candidateKey)
+                                TextField("可选的 Demo API Key", text: $model.candidateKey)
                             } else {
-                                SecureField("输入新的 Demo API Key", text: $model.candidateKey)
+                                SecureField("可选的 Demo API Key", text: $model.candidateKey)
                             }
                         }
                         .textFieldStyle(.roundedBorder)

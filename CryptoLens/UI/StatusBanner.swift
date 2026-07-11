@@ -5,7 +5,6 @@ enum StatusCondition: Hashable, Sendable {
     case corruptedStore
     case classificationUnavailable
     case configuredKeyInvalid
-    case missingKey
     case rateLimited
     case offline
     case timeout
@@ -18,7 +17,6 @@ enum StatusCondition: Hashable, Sendable {
         case .corruptedStore: 99
         case .classificationUnavailable: 98
         case .configuredKeyInvalid: 80
-        case .missingKey: 79
         case .rateLimited: 60
         case .offline: 40
         case .timeout: 39
@@ -33,7 +31,6 @@ enum StatusCondition: Hashable, Sendable {
         case .corruptedStore: String(localized: "本地数据已重置")
         case .classificationUnavailable: String(localized: "股票代币分类暂不可用")
         case .configuredKeyInvalid: String(localized: "API Key 无效")
-        case .missingKey: String(localized: "请先配置 API Key")
         case .rateLimited: String(localized: "请求过于频繁，请稍后再试")
         case .offline: String(localized: "当前网络不可用")
         case .timeout: String(localized: "请求超时")

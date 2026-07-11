@@ -17,9 +17,10 @@ The supported no-membership workflow is the personal Local Beta documented in `d
 - API Terms: https://www.coingecko.com/en/api_terms
 - Website Terms: https://www.coingecko.com/en/terms
 - API Pricing: https://www.coingecko.com/en/api/pricing
+- Keyless Public API: https://docs.coingecko.com/docs/keyless-public-api
 - API attribution destination: https://www.coingecko.com/en/api
-- Selected plan: Demo, using only `https://api.coingecko.com/api/v3` and `x-cg-demo-api-key`
-- Shipping/display conclusion: **Pending Release Owner approval.** The current pricing page marks Demo as attribution-required. The owner must confirm that shipping a downloadable desktop application displaying the selected CoinGecko assets is permitted under the then-current API Terms.
+- Selected access: Keyless Public API by default, with an optional user-supplied Demo key. Both use `https://api.coingecko.com/api/v3`; only Demo requests send `x-cg-demo-api-key`. Pro is not supported.
+- Shipping/display conclusion: **Pending Release Owner approval.** CoinGecko documents Keyless as a shared, IP-based service with lower and dynamic limits that is not intended for polling, production, or high-frequency use. The owner must confirm that shipping a downloadable desktop application with this low-frequency access pattern and the selected displayed assets is permitted under the then-current API Terms.
 - In-app attribution: `Data by CoinGecko`, linked to the API page.
 
 ## Distribution Checklist

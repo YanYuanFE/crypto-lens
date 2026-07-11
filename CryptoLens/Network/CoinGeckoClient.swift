@@ -7,11 +7,15 @@ protocol NetworkStateProviding: Sendable {
 
 struct APIConfiguration: Sendable {
     let baseURL: URL
-    let apiKeyHeaderName: String
+    let demoAPIKeyHeaderName: String
+    let keylessMinimumRequestInterval: Duration
+    let demoMinimumRequestInterval: Duration
 
-    static let demo = APIConfiguration(
+    static let v1 = APIConfiguration(
         baseURL: URL(string: "https://api.coingecko.com/api/v3")!,
-        apiKeyHeaderName: "x-cg-demo-api-key"
+        demoAPIKeyHeaderName: "x-cg-demo-api-key",
+        keylessMinimumRequestInterval: AppConfiguration.v1.keylessMinimumRequestInterval,
+        demoMinimumRequestInterval: AppConfiguration.v1.demoMinimumRequestInterval
     )
 }
 
@@ -20,14 +24,15 @@ actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
     private let session: URLSession
     private let rateLimiter: RequestRateLimiter
     private let configuration: APIConfiguration
+    private var storedKeyIsDisabled = false
 
     init(
         apiKeyStore: any APIKeyStoring,
         session: URLSession = .shared,
         rateLimiter: RequestRateLimiter = RequestRateLimiter(
-            minimumInterval: AppConfiguration.v1.demoMinimumRequestInterval
+            minimumInterval: AppConfiguration.v1.keylessMinimumRequestInterval
         ),
-        configuration: APIConfiguration = .demo
+        configuration: APIConfiguration = .v1
     ) {
         self.apiKeyStore = apiKeyStore
         self.session = session
@@ -40,6 +45,7 @@ actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
     }
 
     func resetNetworkState() async {
+        storedKeyIsDisabled = false
         await rateLimiter.reset()
     }
 
@@ -130,12 +136,24 @@ actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
         queryItems: [URLQueryItem],
         explicitKey: String? = nil
     ) async throws -> Data {
-        let key = try explicitKey ?? apiKeyStore.loadDemoKey()
-        guard let key, !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw NetworkError.missingAPIKey
+        let isExplicitKey = explicitKey != nil
+        let key: String?
+        if let explicitKey {
+            let candidate = explicitKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !candidate.isEmpty else { throw NetworkError.missingAPIKey }
+            key = candidate
+        } else if storedKeyIsDisabled {
+            key = nil
+        } else {
+            key = (try? apiKeyStore.loadDemoKey())?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty
         }
 
-        try await rateLimiter.acquire()
+        let minimumInterval = key == nil
+            ? configuration.keylessMinimumRequestInterval
+            : configuration.demoMinimumRequestInterval
+        try await rateLimiter.acquire(minimumInterval: minimumInterval)
         try Task.checkCancellation()
 
         var components = URLComponents(
@@ -145,7 +163,9 @@ actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
         components.queryItems = queryItems
         var request = URLRequest(url: components.url!)
         request.timeoutInterval = 15
-        request.setValue(key, forHTTPHeaderField: configuration.apiKeyHeaderName)
+        if let key {
+            request.setValue(key, forHTTPHeaderField: configuration.demoAPIKeyHeaderName)
+        }
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         do {
@@ -158,6 +178,9 @@ actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
         } catch is CancellationError {
             throw NetworkError.cancelled
         } catch let error as NetworkError {
+            if error == .unauthorized, !isExplicitKey, key != nil {
+                storedKeyIsDisabled = true
+            }
             throw error
         } catch let error as URLError {
             switch error.code {
@@ -206,6 +229,10 @@ actor CoinGeckoClient: AssetSearching, PriceProviding, NetworkStateProviding {
         guard let url = URL(string: string), url.scheme?.lowercased() == "https" else { return nil }
         return url
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
 private struct SearchPayload: Decodable {
