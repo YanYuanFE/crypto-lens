@@ -85,3 +85,41 @@ struct DevelopmentAPIKeyStore: APIKeyStoring {
         try keychain.deleteAPIKey()
     }
 }
+
+final class CachedAPIKeyStore: APIKeyStoring, @unchecked Sendable {
+    private enum State {
+        case unloaded
+        case loaded(String?)
+    }
+
+    private let backing: any APIKeyStoring
+    private let lock = NSLock()
+    private var state = State.unloaded
+
+    init(backing: any APIKeyStoring) {
+        self.backing = backing
+    }
+
+    func loadAPIKey() throws -> String? {
+        try lock.withLock {
+            if case let .loaded(key) = state { return key }
+            let key = try backing.loadAPIKey()
+            state = .loaded(key)
+            return key
+        }
+    }
+
+    func saveAPIKey(_ key: String) throws {
+        try lock.withLock {
+            try backing.saveAPIKey(key)
+            state = .loaded(key)
+        }
+    }
+
+    func deleteAPIKey() throws {
+        try lock.withLock {
+            try backing.deleteAPIKey()
+            state = .loaded(nil)
+        }
+    }
+}

@@ -2,6 +2,41 @@ import XCTest
 @testable import CryptoLens
 
 final class StorageTests: XCTestCase {
+    func testCachedAPIKeyStoreReadsBackingOnlyOnce() throws {
+        let backing = RecordingCachedAPIKeyBacking(key: "secret")
+        let store = CachedAPIKeyStore(backing: backing)
+
+        XCTAssertEqual(try store.loadAPIKey(), "secret")
+        XCTAssertEqual(try store.loadAPIKey(), "secret")
+        XCTAssertEqual(backing.loadCount, 1)
+    }
+
+    func testCachedAPIKeyStoreSynchronizesSuccessfulSaveAndDelete() throws {
+        let backing = RecordingCachedAPIKeyBacking(key: "old")
+        let store = CachedAPIKeyStore(backing: backing)
+        XCTAssertEqual(try store.loadAPIKey(), "old")
+
+        try store.saveAPIKey("new")
+        XCTAssertEqual(try store.loadAPIKey(), "new")
+        try store.deleteAPIKey()
+        XCTAssertNil(try store.loadAPIKey())
+
+        XCTAssertEqual(backing.loadCount, 1)
+        XCTAssertEqual(backing.storedKey, nil)
+    }
+
+    func testCachedAPIKeyStoreKeepsCachedValueWhenMutationFails() throws {
+        let backing = RecordingCachedAPIKeyBacking(key: "old")
+        let store = CachedAPIKeyStore(backing: backing)
+        XCTAssertEqual(try store.loadAPIKey(), "old")
+
+        backing.failMutations = true
+        XCTAssertThrowsError(try store.saveAPIKey("new"))
+        XCTAssertThrowsError(try store.deleteAPIKey())
+        XCTAssertEqual(try store.loadAPIKey(), "old")
+        XCTAssertEqual(backing.loadCount, 1)
+    }
+
     func testPriceQuoteEncodesDecimalAsStringAndDateAsISO8601() throws {
         let quote = PriceQuote(
             assetID: AssetID(rawValue: "bitcoin", source: .coinGecko),
@@ -141,5 +176,49 @@ final class StorageTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         return directory
+    }
+}
+
+private enum CachedAPIKeyBackingError: Error {
+    case mutationFailed
+}
+
+private final class RecordingCachedAPIKeyBacking: APIKeyStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var key: String?
+    private var reads = 0
+    var failMutations = false
+
+    init(key: String?) {
+        self.key = key
+    }
+
+    var loadCount: Int {
+        lock.withLock { reads }
+    }
+
+    var storedKey: String? {
+        lock.withLock { key }
+    }
+
+    func loadAPIKey() throws -> String? {
+        lock.withLock {
+            reads += 1
+            return key
+        }
+    }
+
+    func saveAPIKey(_ key: String) throws {
+        try lock.withLock {
+            if failMutations { throw CachedAPIKeyBackingError.mutationFailed }
+            self.key = key
+        }
+    }
+
+    func deleteAPIKey() throws {
+        try lock.withLock {
+            if failMutations { throw CachedAPIKeyBackingError.mutationFailed }
+            key = nil
+        }
     }
 }

@@ -5,7 +5,7 @@
 | **文档标题** | Crypto Lens macOS Menu Bar App — Technical Design |
 | **作者** | Crypto Lens maintainers |
 | **日期** | 2026-07-09 |
-| **修订** | 2026-07-11（R57：CMC logo 与 header 对齐修正） |
+| **修订** | 2026-07-11（R58：API Key 进程内缓存） |
 | **状态** | **Implemented / Release Evidence Pending** |
 | **仓库** | `crypto-lens`（实现、测试与本地 Beta 工作流已落地） |
 | **目标平台** | **macOS 14.0+（Sonoma）**；UI 以 SwiftUI `MenuBarExtra` 为主 |
@@ -908,7 +908,7 @@ FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
 | 主题 | 方案 |
 |------|------|
 | 账号 | 无 |
-| API Key | **可选**。candidate 仅存在于 Settings 内存状态；验证成功后才进入 **Keychain**；Configured Key 不回填/复制，只按需显示末四位；禁止 UserDefaults/repo/log；禁止将共享 CMC key 嵌入 Release 二进制。Debug 可用 env |
+| API Key | **可选**。candidate 仅存在于 Settings 内存状态；验证成功后才进入 **Keychain**；Configured Key 首次成功读取后由共享 store 缓存在当前应用进程，后续请求不重复访问 Keychain，保存/删除成功时同步更新，退出即清空；Configured Key 不回填/复制，只显示末四位；禁止 UserDefaults/repo/log；禁止将共享 CMC key 嵌入 Release 二进制。Debug 可用 env |
 | ToS / 归属 | **Hard release gate**：Release Owner 记录核查日期、条款 URL、CMC Keyless/keyed shipping/display 许可结论与准确 attribution 文案；缺任一项或结论不明确即阻塞发布 |
 | 产品边界 | About 明示仅供信息/非投资建议、Stock Token 非传统股票、权利/价格/地区依发行方、应用不交易；链接发行方 primary legal/product pages |
 | ATS | 默认 HTTPS；thumb 仅 https |
@@ -1130,7 +1130,7 @@ FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
 - **Title**: `feat(network): CoinMarketCap Keychain, client, RateLimiter, NetworkError`
 - **Files**: `APIKeyStore`；`Network/**`；URLProtocol tests T8/T9/T12/T13/T17/T22/T23/T48  
 - **Deps**: PR-2  
-- **Description**: CMC Keyless 使用 `/public-api` 且不发送认证 header，可选 key 使用 `X-CMC_PRO_API_KEY`；candidate `/v1/simple/price?ids=1` 验证成功后原子 Keychain commit；stored-key 401 后下一用户动作降级 Keyless；3s/1s 动态 min interval、CMC map 缓存、旧 slug 兼容、共享 429 gate 与 soft-miss。
+- **Description**: CMC Keyless 使用 `/public-api` 且不发送认证 header，可选 key 使用 `X-CMC_PRO_API_KEY`；candidate `/v1/simple/price?ids=1` 验证成功后原子 Keychain commit；共享 store 在首次成功读取后做进程内缓存，保存/删除同步更新；stored-key 401 后下一用户动作降级 Keyless；3s/1s 动态 min interval、CMC map 缓存、旧 slug 兼容、共享 429 gate 与 soft-miss。
 
 ### PR-6: Use cases (Domain only)
 

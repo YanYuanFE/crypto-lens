@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R57
+Specification: `docs/design/macos-menu-bar-app.md` R58
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -36,7 +36,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T19 | Verified | Add success, duplicate selection, and full/save-failure state tests |
 | T20 | Verified | Entering Settings cancels search and leaves through the same panel model without a refresh |
 | T21 | Verified | Empty and historical Watchlists remain usable without a key; historical lists refresh on open through Keyless |
-| T22 | Verified | Candidate validation and failed-commit preservation tests |
+| T22 | Verified | Candidate validation, failed-commit preservation, and shared process-memory Key cache tests |
 | T23 | Verified | Candidate errors do not commit; quit discards in-memory candidate |
 | T24 | Verified | Successful key commit replaces pending or in-flight old-key refresh and performs one full-list refresh |
 | T25 | Verified | Removal save/undo-save/finalize behavior tests |
@@ -90,7 +90,7 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 
 ## Current Repository Evidence
 
-- XCTest: 82 passed, 0 failed, 0 skipped on macOS 26.5.1.
+- XCTest: 85 passed, 0 failed, 0 skipped on macOS 26.5.1.
 - Repository gates: 74 extracted localization keys, Apple/local/CoinMarketCap scope, and all 10 macOS AppIcon slots passed.
 - Live CMC Keyless smoke: unauthenticated `/v1/cryptocurrency/map?symbol=BTC` and `/v1/simple/price?ids=1` returned valid CMC envelopes and Bitcoin data.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.

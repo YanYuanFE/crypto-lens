@@ -5,7 +5,7 @@ struct AppEnvironment {
     let panelViewModel: PanelViewModel
 
     static func live() -> AppEnvironment {
-        let keyStore = DevelopmentAPIKeyStore()
+        let keyStore = CachedAPIKeyStore(backing: DevelopmentAPIKeyStore())
         let watchlistStore = FileWatchlistStore()
         let cacheStore = PriceCacheStore()
         let client = CoinMarketCapClient(apiKeyStore: keyStore)
