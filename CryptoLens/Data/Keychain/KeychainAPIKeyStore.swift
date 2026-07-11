@@ -2,10 +2,10 @@ import Foundation
 import Security
 
 struct KeychainAPIKeyStore: APIKeyStoring {
-    private let service = "app.cryptolens.coingecko"
-    private let account = "demo-api-key"
+    private let service = "app.cryptolens.coinmarketcap"
+    private let account = "pro-api-key"
 
-    func loadDemoKey() throws -> String? {
+    func loadAPIKey() throws -> String? {
         var query = baseQuery
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -19,7 +19,7 @@ struct KeychainAPIKeyStore: APIKeyStoring {
         return String(data: data, encoding: .utf8)
     }
 
-    func saveDemoKey(_ key: String) throws {
+    func saveAPIKey(_ key: String) throws {
         let data = Data(key.utf8)
         let status = SecItemUpdate(
             baseQuery as CFDictionary,
@@ -35,7 +35,7 @@ struct KeychainAPIKeyStore: APIKeyStoring {
         }
     }
 
-    func deleteDemoKey() throws {
+    func deleteAPIKey() throws {
         let status = SecItemDelete(baseQuery as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError(status: status)
@@ -67,21 +67,21 @@ struct DevelopmentAPIKeyStore: APIKeyStoring {
     init(keychain: KeychainAPIKeyStore = KeychainAPIKeyStore()) {
         self.keychain = keychain
 #if DEBUG
-        debugFallback = ProcessInfo.processInfo.environment["COINGECKO_DEMO_API_KEY"]
+        debugFallback = ProcessInfo.processInfo.environment["COINMARKETCAP_API_KEY"]
 #else
         debugFallback = nil
 #endif
     }
 
-    func loadDemoKey() throws -> String? {
-        try keychain.loadDemoKey() ?? debugFallback
+    func loadAPIKey() throws -> String? {
+        try keychain.loadAPIKey() ?? debugFallback
     }
 
-    func saveDemoKey(_ key: String) throws {
-        try keychain.saveDemoKey(key)
+    func saveAPIKey(_ key: String) throws {
+        try keychain.saveAPIKey(key)
     }
 
-    func deleteDemoKey() throws {
-        try keychain.deleteDemoKey()
+    func deleteAPIKey() throws {
+        try keychain.deleteAPIKey()
     }
 }

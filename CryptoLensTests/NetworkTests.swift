@@ -8,65 +8,114 @@ final class NetworkTests: XCTestCase {
         super.tearDown()
     }
 
-    func testMissingKeyUsesKeylessRequestWithoutAuthenticationHeader() async throws {
+    func testMissingKeyUsesCMCPublicAPIWithoutAuthenticationHeader() async throws {
         let client = makeClient(key: nil)
         URLProtocolStub.handler = { request in
-            XCTAssertNil(request.value(forHTTPHeaderField: "x-cg-demo-api-key"))
-            XCTAssertNil(request.value(forHTTPHeaderField: "x-cg-pro-api-key"))
-            XCTAssertEqual(request.url?.path, "/api/v3/search")
-            return Self.response(request, status: 200, body: #"{"coins":[]}"#)
-        }
-
-        let results = try await client.search(query: "bit")
-        XCTAssertEqual(results, [])
-    }
-
-    func testSearchUsesDemoHeaderAndDecodesResults() async throws {
-        let client = makeClient(key: "demo-secret")
-        URLProtocolStub.handler = { request in
-            XCTAssertEqual(request.value(forHTTPHeaderField: "x-cg-demo-api-key"), "demo-secret")
-            XCTAssertEqual(request.url?.path, "/api/v3/search")
-            XCTAssertEqual(URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems?.first?.value, "bit")
-            return Self.response(
-                request,
-                status: 200,
-                body: #"{"coins":[{"id":"bitcoin","name":"Bitcoin","symbol":"btc","market_cap_rank":1,"thumb":"https://example.com/btc.png"}]}"#
-            )
+            XCTAssertNil(request.value(forHTTPHeaderField: "X-CMC_PRO_API_KEY"))
+            XCTAssertEqual(request.url?.path, "/public-api/v1/cryptocurrency/map")
+            return Self.response(request, status: 200, body: Self.mapBody)
         }
 
         let results = try await client.search(query: "bit")
 
         XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results[0].asset.assetID.rawValue, "bitcoin")
+        XCTAssertEqual(results[0].asset.assetID, AssetID(rawValue: "1", source: .coinMarketCap))
         XCTAssertEqual(results[0].marketCapRank, 1)
     }
 
-    func testPricesTreatMissingIDsAsSoftMiss() async throws {
-        let client = makeClient(key: "demo-secret")
+    func testSearchUsesCMCHeaderAndKeyedBase() async throws {
+        let client = makeClient(key: "cmc-secret")
+        URLProtocolStub.handler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-CMC_PRO_API_KEY"), "cmc-secret")
+            XCTAssertEqual(request.url?.path, "/v1/cryptocurrency/map")
+            return Self.response(request, status: 200, body: Self.mapBody)
+        }
+
+        let results = try await client.search(query: "BTC")
+
+        XCTAssertEqual(results.map(\.asset.symbol), ["BTC"])
+    }
+
+    func testPricesUseCMCSimplePriceAndTreatMissingIDsAsSoftMiss() async throws {
+        let client = makeClient(key: "cmc-secret")
         URLProtocolStub.handler = { request in
             let query = try Self.queryItems(in: request)
-            XCTAssertEqual(request.url?.path, "/api/v3/simple/price")
-            XCTAssertEqual(query["ids"], "bitcoin,ethereum")
-            XCTAssertEqual(query["vs_currencies"], "usd")
-            XCTAssertEqual(query["include_24hr_change"], "true")
-            XCTAssertEqual(query["include_last_updated_at"], "true")
-            return Self.response(
-                request,
-                status: 200,
-                body: #"{"bitcoin":{"usd":68000.25,"usd_24h_change":2.5,"last_updated_at":1720000000}}"#
-            )
+            XCTAssertEqual(request.url?.path, "/v1/simple/price")
+            XCTAssertEqual(query["ids"], "1,1027")
+            XCTAssertEqual(query["include_percent_change_24h"], "true")
+            XCTAssertEqual(query["include_last_updated"], "true")
+            return Self.response(request, status: 200, body: Self.priceBody)
         }
-        let ids = ["bitcoin", "ethereum"].map { AssetID(rawValue: $0, source: .coinGecko) }
+        let assets = [
+            Self.asset(id: "1", source: .coinMarketCap, symbol: "BTC", name: "Bitcoin"),
+            Self.asset(id: "1027", source: .coinMarketCap, symbol: "ETH", name: "Ethereum")
+        ]
 
-        let quotes = try await client.prices(for: ids, currency: "usd")
+        let quotes = try await client.prices(for: assets, currency: "usd")
 
         XCTAssertEqual(quotes.count, 1)
-        XCTAssertEqual(quotes[0].assetID, ids[0])
+        XCTAssertEqual(quotes[0].assetID, assets[0].assetID)
         XCTAssertEqual(quotes[0].price, Decimal(string: "68000.25"))
+        XCTAssertEqual(quotes[0].change24hPercent, Decimal(string: "2.5"))
+        XCTAssertEqual(quotes[0].source, .coinMarketCap)
+        XCTAssertNotNil(quotes[0].lastUpdatedAt)
+    }
+
+    func testLegacyCoinGeckoSlugResolvesThroughCMCMap() async throws {
+        let client = makeClient(key: "cmc-secret")
+        let recorder = RequestRecorder()
+        URLProtocolStub.handler = { request in
+            recorder.record(request)
+            if request.url?.path == "/v1/cryptocurrency/map" {
+                return Self.response(request, status: 200, body: Self.mapBody)
+            }
+            XCTAssertEqual(try Self.queryItems(in: request)["ids"], "1")
+            return Self.response(request, status: 200, body: Self.priceBody)
+        }
+        let legacy = Self.asset(id: "bitcoin", source: .coinGecko, symbol: "BTC", name: "Bitcoin")
+
+        let quotes = try await client.prices(for: [legacy], currency: "usd")
+
+        XCTAssertEqual(quotes.first?.assetID, legacy.assetID)
+        XCTAssertEqual(recorder.paths, ["/v1/cryptocurrency/map", "/v1/simple/price"])
+    }
+
+    func testLegacyLongTailAssetFallsBackToExactSymbolMap() async throws {
+        let client = makeClient(key: "cmc-secret")
+        let recorder = RequestRecorder()
+        URLProtocolStub.handler = { request in
+            recorder.record(request)
+            if recorder.count == 1 {
+                return Self.response(request, status: 200, body: Self.mapBody)
+            }
+            if recorder.count == 2 {
+                XCTAssertEqual(try Self.queryItems(in: request)["symbol"], "AAPLON")
+                let body = #"{"data":[{"id":99999,"rank":null,"name":"Apple (Ondo Tokenized Stock)","symbol":"AAPLON","slug":"apple-ondo","platform":null}],"status":{}}"#
+                return Self.response(request, status: 200, body: body)
+            }
+            XCTAssertEqual(try Self.queryItems(in: request)["ids"], "99999")
+            let body = #"{"data":[{"id":99999,"price":212.5}],"status":{}}"#
+            return Self.response(request, status: 200, body: body)
+        }
+        let legacy = Self.asset(
+            id: "apple-ondo-tokenized-stock",
+            source: .coinGecko,
+            symbol: "AAPLON",
+            name: "Apple (Ondo Tokenized Stock)"
+        )
+
+        let quotes = try await client.prices(for: [legacy], currency: "usd")
+
+        XCTAssertEqual(quotes.first?.assetID, legacy.assetID)
+        XCTAssertEqual(quotes.first?.price, Decimal(string: "212.5"))
+        XCTAssertEqual(
+            recorder.paths,
+            ["/v1/cryptocurrency/map", "/v1/cryptocurrency/map", "/v1/simple/price"]
+        )
     }
 
     func testRateLimitMapsRetryAfterAndClosesSharedGate() async {
-        let client = makeClient(key: "demo-secret")
+        let client = makeClient(key: "cmc-secret")
         URLProtocolStub.handler = { request in
             Self.response(request, status: 429, body: "{}", headers: ["Retry-After": "12"])
         }
@@ -97,7 +146,7 @@ final class NetworkTests: XCTestCase {
         }
         await XCTAssertThrowsErrorAsync(
             try await client.prices(
-                for: [AssetID(rawValue: "bitcoin", source: .coinGecko)],
+                for: [Self.asset(id: "1", source: .coinMarketCap, symbol: "BTC", name: "Bitcoin")],
                 currency: "usd"
             )
         ) { error in
@@ -132,7 +181,7 @@ final class NetworkTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(Date().timeIntervalSince(dynamicStartedAt), 0.08)
     }
 
-    func testUnauthorizedStoredKeyFallsBackToKeylessOnNextUserAction() async throws {
+    func testUnauthorizedStoredKeyFallsBackToCMCPublicAPIOnNextUserAction() async throws {
         let client = makeClient(key: "expired-key")
         let recorder = RequestRecorder()
         URLProtocolStub.handler = { request in
@@ -140,7 +189,7 @@ final class NetworkTests: XCTestCase {
             if recorder.count == 1 {
                 return Self.response(request, status: 401, body: "{}")
             }
-            return Self.response(request, status: 200, body: #"{"coins":[]}"#)
+            return Self.response(request, status: 200, body: Self.mapBody)
         }
 
         await XCTAssertThrowsErrorAsync(try await client.search(query: "bit")) { error in
@@ -148,25 +197,24 @@ final class NetworkTests: XCTestCase {
         }
         let results = try await client.search(query: "eth")
 
-        XCTAssertEqual(results, [])
-        XCTAssertEqual(recorder.demoAPIKeys, ["expired-key", nil])
+        XCTAssertEqual(results.map(\.asset.symbol), ["ETH"])
+        XCTAssertEqual(recorder.apiKeys, ["expired-key", nil])
+        XCTAssertEqual(recorder.paths, ["/v1/cryptocurrency/map", "/public-api/v1/cryptocurrency/map"])
     }
 
-    func testCandidateValidationUsesExplicitKeyAndRequiresBitcoinUSD() async throws {
+    func testCandidateValidationUsesExplicitCMCKeyAndBitcoinID() async throws {
         let client = makeClient(key: "stored-key")
         URLProtocolStub.handler = { request in
-            XCTAssertEqual(request.value(forHTTPHeaderField: "x-cg-demo-api-key"), "candidate-key")
-            XCTAssertEqual(request.url?.path, "/api/v3/simple/price")
-            let query = try Self.queryItems(in: request)
-            XCTAssertEqual(query["ids"], "bitcoin")
-            XCTAssertEqual(query["vs_currencies"], "usd")
-            return Self.response(request, status: 200, body: #"{"bitcoin":{"usd":68000}}"#)
+            XCTAssertEqual(request.value(forHTTPHeaderField: "X-CMC_PRO_API_KEY"), "candidate-key")
+            XCTAssertEqual(request.url?.path, "/v1/simple/price")
+            XCTAssertEqual(try Self.queryItems(in: request)["ids"], "1")
+            return Self.response(request, status: 200, body: Self.priceBody)
         }
 
         try await client.validate(candidateKey: "candidate-key")
 
         URLProtocolStub.handler = { request in
-            Self.response(request, status: 200, body: #"{"bitcoin":{}}"#)
+            Self.response(request, status: 200, body: #"{"data":[],"status":{}}"#)
         }
         await XCTAssertThrowsErrorAsync(try await client.validate(candidateKey: "candidate-key")) { error in
             guard case NetworkError.decoding = error else {
@@ -175,7 +223,7 @@ final class NetworkTests: XCTestCase {
         }
     }
 
-    func testUnauthorizedCandidateDoesNotDisableStoredDemoKey() async throws {
+    func testUnauthorizedCandidateDoesNotDisableStoredCMCKey() async throws {
         let client = makeClient(key: "stored-key")
         let recorder = RequestRecorder()
         URLProtocolStub.handler = { request in
@@ -183,7 +231,7 @@ final class NetworkTests: XCTestCase {
             if recorder.count == 1 {
                 return Self.response(request, status: 401, body: "{}")
             }
-            return Self.response(request, status: 200, body: #"{"coins":[]}"#)
+            return Self.response(request, status: 200, body: Self.mapBody)
         }
 
         await XCTAssertThrowsErrorAsync(try await client.validate(candidateKey: "bad-candidate")) { error in
@@ -191,11 +239,11 @@ final class NetworkTests: XCTestCase {
         }
         _ = try await client.search(query: "bit")
 
-        XCTAssertEqual(recorder.demoAPIKeys, ["bad-candidate", "stored-key"])
+        XCTAssertEqual(recorder.apiKeys, ["bad-candidate", "stored-key"])
     }
 
     func testResetNetworkStateClearsRateLimitGate() async throws {
-        let client = makeClient(key: "demo-secret")
+        let client = makeClient(key: "cmc-secret")
         URLProtocolStub.handler = { request in
             Self.response(request, status: 429, body: "{}", headers: ["Retry-After": "60"])
         }
@@ -203,28 +251,43 @@ final class NetworkTests: XCTestCase {
 
         await client.resetNetworkState()
         URLProtocolStub.handler = { request in
-            Self.response(request, status: 200, body: #"{"coins":[]}"#)
+            Self.response(request, status: 200, body: Self.mapBody)
         }
 
         let results = try await client.search(query: "bit")
-        XCTAssertEqual(results, [])
+        XCTAssertEqual(results.map(\.asset.symbol), ["BTC"])
         let deadline = await client.nextAllowedRequestAt
         XCTAssertNil(deadline)
     }
 
-    private func makeClient(key: String?) -> CoinGeckoClient {
+    private func makeClient(key: String?) -> CoinMarketCapClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
-        return CoinGeckoClient(
+        return CoinMarketCapClient(
             apiKeyStore: MemoryAPIKeyStore(key: key),
             session: URLSession(configuration: configuration),
             rateLimiter: RequestRateLimiter(minimumInterval: .zero),
-            configuration: APIConfiguration(
-                baseURL: URL(string: "https://api.coingecko.com/api/v3")!,
-                demoAPIKeyHeaderName: "x-cg-demo-api-key",
+            configuration: CMCAPIConfiguration(
+                keyedBaseURL: URL(string: "https://pro-api.coinmarketcap.com")!,
+                keylessBaseURL: URL(string: "https://pro-api.coinmarketcap.com/public-api")!,
+                apiKeyHeaderName: "X-CMC_PRO_API_KEY",
                 keylessMinimumRequestInterval: .zero,
-                demoMinimumRequestInterval: .zero
+                authenticatedMinimumRequestInterval: .zero
             )
+        )
+    }
+
+    private static let mapBody = #"{"data":[{"id":1,"rank":1,"name":"Bitcoin","symbol":"BTC","slug":"bitcoin","platform":null},{"id":1027,"rank":2,"name":"Ethereum","symbol":"ETH","slug":"ethereum","platform":null}],"status":{}}"#
+    private static let priceBody = #"{"data":[{"id":1,"price":68000.25,"percent_change_24h":2.5,"last_updated":"2026-07-11T01:00:00.000Z"}],"status":{}}"#
+
+    private static func asset(id: String, source: PriceSource, symbol: String, name: String) -> Asset {
+        Asset(
+            assetID: AssetID(rawValue: id, source: source),
+            symbol: symbol,
+            name: name,
+            kind: .crypto,
+            platform: nil,
+            contractAddress: nil
         )
     }
 
@@ -256,9 +319,9 @@ private final class MemoryAPIKeyStore: APIKeyStoring, @unchecked Sendable {
     private let key: String?
 
     init(key: String?) { self.key = key }
-    func loadDemoKey() throws -> String? { key }
-    func saveDemoKey(_ key: String) throws {}
-    func deleteDemoKey() throws {}
+    func loadAPIKey() throws -> String? { key }
+    func saveAPIKey(_ key: String) throws {}
+    func deleteAPIKey() throws {}
 }
 
 private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
@@ -290,9 +353,10 @@ private final class RequestRecorder: @unchecked Sendable {
     private var requests: [URLRequest] = []
 
     var count: Int { lock.withLock { requests.count } }
-    var demoAPIKeys: [String?] {
-        lock.withLock { requests.map { $0.value(forHTTPHeaderField: "x-cg-demo-api-key") } }
+    var apiKeys: [String?] {
+        lock.withLock { requests.map { $0.value(forHTTPHeaderField: "X-CMC_PRO_API_KEY") } }
     }
+    var paths: [String] { lock.withLock { requests.compactMap(\.url?.path) } }
 
     func record(_ request: URLRequest) {
         lock.withLock { requests.append(request) }

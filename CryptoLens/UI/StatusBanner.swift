@@ -34,7 +34,7 @@ enum StatusCondition: Hashable, Sendable {
         case .rateLimited: String(localized: "请求过于频繁，请稍后再试")
         case .offline: String(localized: "当前网络不可用")
         case .timeout: String(localized: "请求超时")
-        case .serverError: String(localized: "CoinGecko 暂时不可用")
+        case .serverError: String(localized: "CoinMarketCap 暂时不可用")
         case .refreshFailed: String(localized: "行情更新失败")
         }
     }

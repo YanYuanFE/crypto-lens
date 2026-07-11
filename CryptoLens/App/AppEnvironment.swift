@@ -8,7 +8,7 @@ struct AppEnvironment {
         let keyStore = DevelopmentAPIKeyStore()
         let watchlistStore = FileWatchlistStore()
         let cacheStore = PriceCacheStore()
-        let client = CoinGeckoClient(apiKeyStore: keyStore)
+        let client = CoinMarketCapClient(apiKeyStore: keyStore)
         let useCase = WatchlistUseCase(store: watchlistStore)
         let classifier = CuratedStockTokenClassifier()
         return AppEnvironment(

@@ -961,7 +961,7 @@ final class PanelViewModelTests: XCTestCase {
             openRefreshDebounce: openDebounce,
             manualRefreshCooldown: .seconds(60),
             keylessMinimumRequestInterval: .seconds(3),
-            demoMinimumRequestInterval: .milliseconds(750),
+            authenticatedMinimumRequestInterval: .seconds(1),
             staleTimelineInterval: staleTimelineInterval,
             shutdownDrainTimeout: shutdownDrainTimeout,
             maxWatchlistCount: 50
@@ -1068,7 +1068,8 @@ private actor CountingMarketService: AssetSearching, PriceProviding, APIKeyValid
         searchError = error
     }
 
-    func prices(for ids: [AssetID], currency: String) async throws -> [PriceQuote] {
+    func prices(for assets: [Asset], currency: String) async throws -> [PriceQuote] {
+        let ids = assets.map(\.assetID)
         priceRequestCount += 1
         priceRequestIDs.append(ids)
         if priceDelay > .zero { try await Task.sleep(for: priceDelay) }
@@ -1124,9 +1125,9 @@ private enum PanelStoreError: Error {
 }
 
 private struct PanelAPIKeyStore: APIKeyStoring {
-    func loadDemoKey() throws -> String? { "configured-demo-key" }
-    func saveDemoKey(_ key: String) throws {}
-    func deleteDemoKey() throws {}
+    func loadAPIKey() throws -> String? { "configured-api-key" }
+    func saveAPIKey(_ key: String) throws {}
+    func deleteAPIKey() throws {}
 }
 
 private final class RecordingAPIKeyStore: APIKeyStoring, @unchecked Sendable {
@@ -1143,15 +1144,15 @@ private final class RecordingAPIKeyStore: APIKeyStoring, @unchecked Sendable {
         lock.withLock { key }
     }
 
-    func loadDemoKey() throws -> String? {
+    func loadAPIKey() throws -> String? {
         lock.withLock { key }
     }
 
-    func saveDemoKey(_ key: String) throws {
+    func saveAPIKey(_ key: String) throws {
         lock.withLock { self.key = key }
     }
 
-    func deleteDemoKey() throws {
+    func deleteAPIKey() throws {
         if failDelete { throw PanelStoreError.saveFailed }
         lock.withLock { key = nil }
     }

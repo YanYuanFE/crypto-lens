@@ -4,19 +4,19 @@ release_path = File.expand_path("../docs/release.md", __dir__)
 release = File.read(release_path)
 
 required_urls = %w[
-  https://docs.coingecko.com/docs/keyless-public-api
-  https://www.coingecko.com/en/api_terms
-  https://www.coingecko.com/en/terms
-  https://www.coingecko.com/en/api/pricing
+  https://pro.coinmarketcap.com/user-agreement-commercial/
+  https://coinmarketcap.com/api/pricing/
+  https://coinmarketcap.com/api/documentation/
+  https://coinmarketcap.com/api/documentation/pro-api-reference/keyless-public-api
 ]
 missing = required_urls.reject { |url| release.include?(url) }
 abort "Release evidence is missing URLs: #{missing.join(", ")}" unless missing.empty?
 
 if ARGV == ["--preflight"]
   abort "Release Owner is unassigned" if release.include?("Release Owner: **Unassigned**")
-  abort "CoinGecko shipping/display conclusion is pending" if release.include?("Shipping/display conclusion: **Pending")
+  abort "CoinMarketCap shipping/display conclusion is pending" if release.include?("Shipping/display conclusion: **Pending")
   abort "Release Owner preflight checklist is incomplete" unless release.include?(
-    "- [x] Release Owner is named and has recorded the CoinGecko shipping/display conclusion."
+    "- [x] Release Owner is named and has recorded the CoinMarketCap shipping/display conclusion."
   )
   puts "Release preflight passed"
   exit

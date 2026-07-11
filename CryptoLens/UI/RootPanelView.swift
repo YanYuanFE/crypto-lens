@@ -146,7 +146,7 @@ struct RootPanelView: View {
     private var searchField: some View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("搜索 CoinGecko 资产", text: $model.query)
+            TextField("搜索 CoinMarketCap 资产", text: $model.query)
                 .textFieldStyle(.plain)
                 .disabled(!model.canSearch)
                 .onChange(of: model.query) { _, _ in model.queryChanged() }
@@ -244,28 +244,28 @@ struct RootPanelView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("CoinGecko API").font(.headline)
+                    Text("CoinMarketCap API").font(.headline)
                     if let suffix = model.configuredKeySuffix {
                         if model.configuredKeyIsValid {
-                            Label("Demo Key 已配置 ····\(suffix)", systemImage: "checkmark.circle.fill")
+                            Label("API Key 已配置 ····\(suffix)", systemImage: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
-                            Label("Demo Key 无效 · 当前使用免 Key", systemImage: "exclamationmark.circle.fill")
+                            Label("API Key 无效 · 当前使用公共 API", systemImage: "exclamationmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Label("当前使用免 Key 公共 API", systemImage: "network")
+                        Label("当前使用 CoinMarketCap 公共 API", systemImage: "network")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     HStack(spacing: 6) {
                         Group {
                             if model.isCandidateKeyRevealed {
-                                TextField("可选的 Demo API Key", text: $model.candidateKey)
+                                TextField("可选的 CoinMarketCap API Key", text: $model.candidateKey)
                             } else {
-                                SecureField("可选的 Demo API Key", text: $model.candidateKey)
+                                SecureField("可选的 CoinMarketCap API Key", text: $model.candidateKey)
                             }
                         }
                         .textFieldStyle(.roundedBorder)
@@ -294,7 +294,7 @@ struct RootPanelView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("关于").font(.headline)
                     Text("Crypto Lens \(appVersion)").foregroundStyle(.secondary)
-                    Text("股票代币标记来自随包审核目录；行情由 CoinGecko 提供。")
+                    Text("股票代币标记来自随包审核目录；行情由 CoinMarketCap 提供。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text("仅供信息，不构成投资建议。股票代币不是传统股票，其结构、权利、价格及可用地区取决于发行方，价格可能偏离标的资产。Crypto Lens 不提供交易服务。")
@@ -326,7 +326,7 @@ struct RootPanelView: View {
                 .disabled(model.mode == .settings)
                 .frame(width: 32)
             Spacer()
-            Link("Data by CoinGecko", destination: URL(string: "https://www.coingecko.com/en/api")!)
+            Link("Data by CoinMarketCap", destination: URL(string: "https://coinmarketcap.com/")!)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()

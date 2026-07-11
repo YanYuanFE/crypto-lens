@@ -14,6 +14,7 @@ struct CuratedStockTokenClassifier: StockTokenClassifying {
     let isAvailable: Bool
     private let coinGeckoIDs: Set<String>
     private let contracts: Set<String>
+    private let symbols: Set<String>
 
     init(catalog: CuratedStockTokenCatalog) {
         self.init(
@@ -22,7 +23,8 @@ struct CuratedStockTokenClassifier: StockTokenClassifying {
             contracts: Set(catalog.entries.compactMap { entry in
             guard let platform = entry.platform, let address = entry.contractAddress else { return nil }
             return "\(platform.lowercased()):\(address.lowercased())"
-            })
+            }),
+            symbols: Set(catalog.entries.map { $0.symbol.uppercased() })
         )
     }
 
@@ -32,20 +34,29 @@ struct CuratedStockTokenClassifier: StockTokenClassifying {
         } catch {
             Logger(subsystem: "app.cryptolens", category: "classification")
                 .fault("Curated stock-token catalog unavailable: \(error.localizedDescription, privacy: .public)")
-            self.init(isAvailable: false, coinGeckoIDs: [], contracts: [])
+            self.init(isAvailable: false, coinGeckoIDs: [], contracts: [], symbols: [])
         }
     }
 
-    private init(isAvailable: Bool, coinGeckoIDs: Set<String>, contracts: Set<String>) {
+    private init(
+        isAvailable: Bool,
+        coinGeckoIDs: Set<String>,
+        contracts: Set<String>,
+        symbols: Set<String>
+    ) {
         self.isAvailable = isAvailable
         self.coinGeckoIDs = coinGeckoIDs
         self.contracts = contracts
+        self.symbols = symbols
     }
 
     func kind(for asset: Asset) -> AssetKind {
         if coinGeckoIDs.contains(asset.assetID.rawValue.lowercased()) { return .stockToken }
         if let platform = asset.platform, let address = asset.contractAddress,
            contracts.contains("\(platform.lowercased()):\(address.lowercased())") {
+            return .stockToken
+        }
+        if asset.assetID.source == .coinMarketCap, symbols.contains(asset.symbol.uppercased()) {
             return .stockToken
         }
         return .crypto

@@ -7,7 +7,7 @@ Crypto Lens can be built and used on the current Mac without Apple Developer Pro
 - macOS 14 or later
 - Xcode with the macOS SDK and command-line tools
 - No Apple Developer account, certificate, or notarization profile
-- No CoinGecko API key is required; a Demo key remains an optional enhancement
+- No API key is required; a CoinMarketCap API key remains an optional enhancement
 
 ## Build
 
@@ -27,9 +27,9 @@ The script runs the scope and icon gates, creates a Release build for the curren
 scripts/install_local_beta.sh
 ```
 
-The app is installed to `~/Applications/CryptoLens.app` and launched. Running the same command upgrades the existing local installation. The installer asks the running app to quit, verifies the replacement, and swaps the bundle atomically. Watchlist/cache data in Application Support and the Demo API Key in Keychain are preserved; the stable local signing requirement prevents each rebuild from receiving a new cdhash-only identity.
+The app is installed to `~/Applications/CryptoLens.app` and launched. Running the same command upgrades the existing local installation. The installer asks the running app to quit, verifies the replacement, and swaps the bundle atomically. Watchlist/cache data in Application Support and the CoinMarketCap API Key in Keychain are preserved; the stable local signing requirement prevents each rebuild from receiving a new cdhash-only identity.
 
-The first migration from an older Xcode or cdhash-only ad-hoc build may require one Keychain approval or re-entry of an optional Demo API Key. Subsequent builds made by this Local Beta workflow keep the same designated requirement.
+The first migration from an older Xcode or cdhash-only ad-hoc build may require one Keychain approval or re-entry of an optional CoinMarketCap API Key. Subsequent builds made by this Local Beta workflow keep the same designated requirement.
 
 Available options:
 

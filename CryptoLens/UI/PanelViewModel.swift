@@ -7,7 +7,7 @@ protocol APIKeyValidating: Sendable {
     func validate(candidateKey: String) async throws
 }
 
-extension CoinGeckoClient: APIKeyValidating {}
+extension CoinMarketCapClient: APIKeyValidating {}
 
 enum PanelMode: Equatable {
     case watchlist
@@ -413,7 +413,7 @@ final class PanelViewModel {
     private func validateAndSaveKey() async {
         let candidate = candidateKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidate.isEmpty else {
-            localMessage = String(localized: "请输入 Demo API Key")
+            localMessage = String(localized: "请输入 CoinMarketCap API Key")
             return
         }
         isValidatingKey = true
@@ -421,7 +421,7 @@ final class PanelViewModel {
         do {
             try await keyValidator.validate(candidateKey: candidate)
             try Task.checkCancellation()
-            try apiKeyStore.saveDemoKey(candidate)
+            try apiKeyStore.saveAPIKey(candidate)
             await networkState.resetNetworkState()
             nextAllowedRequestAt = nil
             candidateKey = ""
@@ -450,7 +450,7 @@ final class PanelViewModel {
     func removeAPIKey() async {
         do {
             cancelOwnedNetworkTasks()
-            try apiKeyStore.deleteDemoKey()
+            try apiKeyStore.deleteAPIKey()
             await networkState.resetNetworkState()
             nextAllowedRequestAt = nil
             configuredKeySuffix = nil
@@ -544,7 +544,10 @@ final class PanelViewModel {
         var attempt = 0
         while true {
             do {
-                return try await priceProvider.prices(for: ids, currency: configuration.quoteCurrency)
+                let assets = ids.compactMap { id in
+                    items.first(where: { $0.asset.assetID == id })?.asset
+                }
+                return try await priceProvider.prices(for: assets, currency: configuration.quoteCurrency)
             } catch {
                 guard attempt < 2, isPanelOpen, isRetryablePriceError(error) else { throw error }
                 let delay = attempt == 0 ? 1 : 2
@@ -629,7 +632,7 @@ final class PanelViewModel {
     }
 
     private func refreshConfiguredKeyStatus() {
-        let key = try? apiKeyStore.loadDemoKey()
+        let key = try? apiKeyStore.loadAPIKey()
         configuredKeySuffix = key.flatMap { value in
             guard !value.isEmpty else { return nil }
             return String(value.suffix(4))
@@ -715,12 +718,12 @@ final class PanelViewModel {
 
     private func message(for error: Error) -> String {
         switch error as? NetworkError {
-        case .missingAPIKey: String(localized: "请输入 Demo API Key")
+        case .missingAPIKey: String(localized: "请输入 CoinMarketCap API Key")
         case .unauthorized: String(localized: "API Key 无效")
         case .rateLimited: String(localized: "请求过于频繁，请稍后再试")
         case .offline: String(localized: "当前网络不可用")
         case .timeout: String(localized: "请求超时")
-        case .serverError: String(localized: "CoinGecko 暂时不可用")
+        case .serverError: String(localized: "CoinMarketCap 暂时不可用")
         case .decoding: String(localized: "行情数据格式异常")
         case .cancelled: ""
         default: String(localized: "请求失败，请重试")

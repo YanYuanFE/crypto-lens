@@ -19,7 +19,7 @@ Verified on 2026-07-10 against the [Ondo available-assets documentation](https:/
 ## Excluded
 
 - No known IDs from either selected CoinGecko issuer category were excluded at verification time.
-- Official issuer products not yet indexed in the corresponding CoinGecko category are intentionally excluded because Crypto Lens cannot query them through its v1 data source.
+- Official issuer products not yet indexed in the corresponding CoinGecko category remain excluded from this curated classification snapshot. Runtime discovery and quotes now depend on CoinMarketCap coverage; exact curated symbols provide the compatibility bridge for CMC assets.
 - Assets added after the verification date require rerunning the updater and reviewing the diff; they remain conservatively classified as crypto until shipped in a later catalog.
 
 The CI count floors are regression guards, not the completeness definition. Release completeness is established by matching all IDs in both dated category snapshots and documenting the only deliberate exclusion above.

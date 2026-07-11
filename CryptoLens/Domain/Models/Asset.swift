@@ -2,6 +2,7 @@ import Foundation
 
 enum PriceSource: String, Codable, Sendable {
     case coinGecko
+    case coinMarketCap
 }
 
 enum AssetKind: String, Codable, Sendable {

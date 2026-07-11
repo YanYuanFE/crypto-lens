@@ -3,7 +3,7 @@ protocol AssetSearching: Sendable {
 }
 
 protocol PriceProviding: Sendable {
-    func prices(for ids: [AssetID], currency: String) async throws -> [PriceQuote]
+    func prices(for assets: [Asset], currency: String) async throws -> [PriceQuote]
 }
 
 protocol WatchlistStoring: Sendable {
@@ -12,9 +12,9 @@ protocol WatchlistStoring: Sendable {
 }
 
 protocol APIKeyStoring: Sendable {
-    func loadDemoKey() throws -> String?
-    func saveDemoKey(_ key: String) throws
-    func deleteDemoKey() throws
+    func loadAPIKey() throws -> String?
+    func saveAPIKey(_ key: String) throws
+    func deleteAPIKey() throws
 }
 
 protocol CorruptionRecoveryReporting: Sendable {

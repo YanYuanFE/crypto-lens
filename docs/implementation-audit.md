@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R55
+Specification: `docs/design/macos-menu-bar-app.md` R56
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -18,20 +18,20 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T1 | Verified | `StorageTests.testPriceQuoteEncodesDecimalAsStringAndDateAsISO8601` |
 | T2 | Verified | `StorageTests.testInterruptedTemporaryWriteCannotReplaceExistingSnapshot` and atomic replacement tests |
 | T3 | Verified | `WatchlistUseCaseTests` duplicate and 50-item cap tests |
-| T4 | Verified | `DomainContractTests.testV1ConfigurationMatchesTheProductContract` |
-| T5 | Verified | `ClassificationTests.testClassifierUsesCuratedIDAndDefaultsUnknownToCrypto` |
+| T4 | Verified | Configuration test covers CMC Keyless 3s and authenticated 1s intervals |
+| T5 | Verified | Classifier tests cover legacy curated slug, CMC exact symbol, and unknown crypto fallback |
 | T6 | Verified | `PanelViewModelTests.testOneCharacterQueryNeverCallsSearch` |
 | T7 | Verified | Debounce/latest-generation tests in `PanelViewModelTests` |
 | T8 | Verified | Shared 429 gate tests in `NetworkTests` and `PanelViewModelTests` |
 | T9 | Verified | Bulk soft-miss tests in `NetworkTests` and `PanelViewModelTests` |
 | T10 | Verified | `PanelViewModelTests.testStaleBoundaryUsesFetchedAtAndCurrentPresentationTime` |
 | T11 | Verified | Open debounce, stable-open, and close-before-debounce tests in `PanelViewModelTests` |
-| T12 | Verified | Keyless network tests require HTTP without Demo/Pro headers; live `/simple/price` and `/search` smoke passed without a key |
+| T12 | Verified | Tests require CMC `/public-api` without auth and keyed root with `X-CMC_PRO_API_KEY`; live map/price smoke passed without a key |
 | T13 | Verified | Search/open/price cancellation and retry-sleep cancellation tests |
 | T14 | Verified | Bootstrap race and empty-watchlist open tests |
 | T15 | Verified | Closed-panel Add and in-flight Add coalescing tests |
 | T16 | Verified | Mutation rollback tests in `WatchlistUseCaseTests` and `PanelViewModelTests` |
-| T17 | Verified | Rate limiter spacing/cancellation and cross-endpoint gate tests |
+| T17 | Verified | Dynamic CMC Keyless/keyed spacing, cancellation, and cross-endpoint 429 gate tests |
 | T18 | Partial | Query-driven Watchlist/Search transitions are tested; Esc is deferred with T34/T35 |
 | T19 | Verified | Add success, duplicate selection, and full/save-failure state tests |
 | T20 | Verified | Entering Settings cancels search and leaves through the same panel model without a refresh |
@@ -59,7 +59,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T42 | Verified | Cache-first bulk success, soft-miss, and failure-preservation tests |
 | T43 | Verified | Bulk metadata, partial freshness, Add-price isolation, and stale timeline tests |
 | T44 | Partial | Frozen kind/classifier behavior and stock-token snapshot data are covered; final badge color/a11y review remains |
-| T45 | Verified | Catalog schema/count/fixture gate and unavailable-catalog fallback tests |
+| T45 | Verified | Catalog schema/count/fixture gate, unavailable fallback, and CMC symbol compatibility tests |
 | T46 | Partial | Keyless empty state and batch Undo behavior are implemented; delete-last/Undo live visual check remains |
 | T47 | Verified | Full-list race and existing-result selection behavior tests |
 | T48 | Partial | Success/failure state preservation and return to Keyless are tested; destructive confirmation interaction needs manual UI verification |
@@ -72,11 +72,11 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T55 | Partial | `verify_assets.rb` validates all ten AppIcon slots; status-item visual states and installed Finder/Gatekeeper appearance remain manual/external |
 | T56 | Partial | String Catalog extraction gate covers all visible keys and stress snapshots cover long text; final live truncation/a11y review remains |
 | T57 | Verified | USD request, validation, cache-envelope, configuration, and formatter gates |
-| T58 | Verified | Scope gate rejects Pro; tests cover no-header Keyless, Demo header, candidate isolation, and stored-key 401 fallback on the next action |
+| T58 | Verified | Tests cover CMC roots/header, candidate isolation, stored-key 401 fallback, simple-price mapping, and legacy CoinGecko slug plus long-tail symbol compatibility; scope rejects CoinGecko runtime URLs |
 | T59 | Partial | Single icon-only `MenuBarExtra` is scope-gated; final status-item accessibility/selected-state check remains manual |
 | T60 | Verified | `verify_scope.rb` rejects notifications and background-task APIs/entitlements |
 | T61 | Verified | Local Application Support stores plus CloudKit/iCloud negative scope gate |
-| T62 | External | `verify_release.rb` intentionally blocks while Release Owner and CoinGecko shipping/display conclusion are missing |
+| T62 | External | `verify_release.rb` intentionally blocks while Release Owner and CoinMarketCap shipping/display conclusion are missing |
 | T63 | Partial | About copy and HTTPS source links are implemented; installed external-link behavior needs manual verification |
 | T64 | Verified | `verify_scope.rb` requires exactly one `MenuBarExtra`; no Settings scene exists |
 | T65 | Verified | `verify_scope.rb` rejects `SMAppService`; no login-item UI, entitlement, helper, or model exists |
@@ -90,9 +90,9 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 
 ## Current Repository Evidence
 
-- XCTest: 79 passed, 0 failed, 0 skipped on macOS 26.5.1.
-- Repository gates: 74 extracted localization keys, Apple/local/Keyless+Demo scope, and all 10 macOS AppIcon slots passed.
-- Live Keyless smoke: unauthenticated `/simple/price` returned Bitcoin USD and `/search` returned 25 results with Bitcoin first.
+- XCTest: 81 passed, 0 failed, 0 skipped on macOS 26.5.1.
+- Repository gates: 74 extracted localization keys, Apple/local/CoinMarketCap scope, and all 10 macOS AppIcon slots passed.
+- Live CMC Keyless smoke: unauthenticated `/v1/cryptocurrency/map?symbol=BTC` and `/v1/simple/price?ids=1` returned valid CMC envelopes and Bitcoin data.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.
 - Visual stress review: Watchlist, Search, and Settings were reviewed at 320/360/380pt; long names truncate while quote, rank, and action columns remain visible.
 - Local Beta: arm64 Release build, ad-hoc Hardened Runtime signature, stable designated requirement, installation, relaunch, and in-place upgrade passed at `~/Applications/CryptoLens.app`.

@@ -9,7 +9,7 @@ final class DomainContractTests: XCTestCase {
         XCTAssertEqual(configuration.openRefreshDebounce, .milliseconds(200))
         XCTAssertEqual(configuration.manualRefreshCooldown, .seconds(60))
         XCTAssertEqual(configuration.keylessMinimumRequestInterval, .seconds(3))
-        XCTAssertEqual(configuration.demoMinimumRequestInterval, .milliseconds(750))
+        XCTAssertEqual(configuration.authenticatedMinimumRequestInterval, .seconds(1))
         XCTAssertEqual(configuration.staleTimelineInterval, .seconds(30))
         XCTAssertEqual(configuration.shutdownDrainTimeout, .seconds(2))
         XCTAssertEqual(configuration.maxWatchlistCount, 50)

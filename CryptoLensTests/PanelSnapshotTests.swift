@@ -191,7 +191,7 @@ private extension PanelMode {
 
 private actor SnapshotMarketService: AssetSearching, PriceProviding, APIKeyValidating, NetworkStateProviding {
     func search(query: String) async throws -> [SearchResult] { [] }
-    func prices(for ids: [AssetID], currency: String) async throws -> [PriceQuote] { [] }
+    func prices(for assets: [Asset], currency: String) async throws -> [PriceQuote] { [] }
     func validate(candidateKey: String) async throws {}
     var nextAllowedRequestAt: Date? { nil }
     func resetNetworkState() async {}
@@ -203,9 +203,9 @@ private actor SnapshotWatchlistStore: WatchlistStoring {
 }
 
 private struct SnapshotAPIKeyStore: APIKeyStoring {
-    func loadDemoKey() throws -> String? { "snapshot-key" }
-    func saveDemoKey(_ key: String) throws {}
-    func deleteDemoKey() throws {}
+    func loadAPIKey() throws -> String? { "snapshot-key" }
+    func saveAPIKey(_ key: String) throws {}
+    func deleteAPIKey() throws {}
 }
 
 private struct SnapshotClassifier: StockTokenClassifying {

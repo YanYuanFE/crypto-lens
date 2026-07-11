@@ -29,6 +29,19 @@ final class ClassificationTests: XCTestCase {
     func testClassifierUsesCuratedIDAndDefaultsUnknownToCrypto() throws {
         let classifier = CuratedStockTokenClassifier(catalog: try CuratedStockTokenCatalog.load(bundle: .main))
         XCTAssertEqual(classifier.kind(for: asset("apple-ondo-tokenized-stock")), .stockToken)
+        XCTAssertEqual(
+            classifier.kind(
+                for: Asset(
+                    assetID: AssetID(rawValue: "99999", source: .coinMarketCap),
+                    symbol: "AAPLON",
+                    name: "Apple (Ondo Tokenized Stock)",
+                    kind: .crypto,
+                    platform: nil,
+                    contractAddress: nil
+                )
+            ),
+            .stockToken
+        )
         XCTAssertEqual(classifier.kind(for: asset("bitcoin")), .crypto)
     }
 
