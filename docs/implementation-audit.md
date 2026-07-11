@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R58
+Specification: `docs/design/macos-menu-bar-app.md` R59
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -43,7 +43,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T26 | Verified | Multi-removal batch restores original order and quotes |
 | T27 | Verified | Interleaved Add/Undo and reorder-finalizes-batch tests |
 | T28 | Partial | Shared reorder command and persistence rollback are tested; drag/menu/VoiceOver interaction needs manual UI verification |
-| T29 | Partial | 320/360/380 snapshot stress coverage exists; header refresh is right-aligned; final hover, tooltip, VoiceOver, and visual overlap review remains |
+| T29 | Partial | 320/360/380 snapshot stress coverage exists; header refresh is right-aligned and the Watchlist ellipsis hides the redundant menu indicator; final hover, tooltip, and VoiceOver review remains |
 | T30 | Verified | Boundary, scientific notation, sign, nil-change, and accessibility formatter tests |
 | T31 | Verified | Injected-clock stale timeline test proves no price polling and stop-on-close |
 | T32 | Verified | `StatusSelectorTests` priority, recovery, and acknowledgement coverage |

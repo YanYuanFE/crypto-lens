@@ -5,7 +5,7 @@
 | **文档标题** | Crypto Lens macOS Menu Bar App — Technical Design |
 | **作者** | Crypto Lens maintainers |
 | **日期** | 2026-07-09 |
-| **修订** | 2026-07-11（R58：API Key 进程内缓存） |
+| **修订** | 2026-07-11（R59：Watchlist 更多菜单指示修正） |
 | **状态** | **Implemented / Release Evidence Pending** |
 | **仓库** | `crypto-lens`（实现、测试与本地 Beta 工作流已落地） |
 | **目标平台** | **macOS 14.0+（Sonoma）**；UI 以 SwiftUI `MenuBarExtra` 为主 |
@@ -263,6 +263,7 @@ flowchart TD
 - **Manual cooldown 起算**：仅成功的 Watchlist bulk price response 更新进程内 `lastSuccessfulWatchlistBulkAt` 并开始 60 秒，包括 open/manual/keyConfigured refresh；200 soft-miss 仍算成功。失败 response、Candidate Key 验证与 Add 后单 id price 不启动或重置 cooldown。
 - **Cooldown 作用域**：只限制 manual trigger，不阻止下一次 panel open refresh 或 keyConfigured refresh；不持久化，app restart 后为空。与 429 gate 同时存在时按钮按更晚的 `nextManualRefreshAt` / `nextAllowedRequestAt` disabled。
 - **Thumb slot**：Watchlist/Search rows 均固定保留 28pt slot。CMC 数字 ID 按官方 metadata 返回的 `https://s2.coinmarketcap.com/static/img/coins/64x64/{id}.png` 规则生成 logo URL；旧 provider ID 在报价映射后由 `PriceQuote.logoURL` 带回 CMC logo。URL 仅允许 HTTPS，缺失或加载失败时静默显示 SF Symbol 占位。**v1 不落盘图片缓存**（内存 `URLSession` 默认缓存即可）；失败不改变 row 布局，不影响 Add/价格。
+- **Watchlist row 操作槽**：trailing 固定保留 22pt；默认仅显示 `ellipsis` 更多菜单图标并隐藏 `Menu` 自带下拉指示，避免省略号与箭头重叠；hover 时同槽替换为删除图标，不改变 row 几何。
 - **菜单栏**：**icon-only**（见下）；当前规划不显示 symbol/price title，也不引入 primary-asset preference。
 
 ---

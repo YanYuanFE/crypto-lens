@@ -399,6 +399,7 @@ private struct WatchlistRow: View {
                     }
                     .labelStyle(.iconOnly)
                     .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
                 }
             }
             .frame(width: 22)
