@@ -33,5 +33,6 @@ jobs:
           bash -n
           scripts/build_local_beta.sh
           scripts/install_local_beta.sh
+          scripts/build_unnotarized_dmg.sh
           scripts/build_release.sh
           scripts/verify_release_artifact.sh

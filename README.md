@@ -26,6 +26,12 @@
 
 ## 本地安装
 
+### 下载 Beta DMG
+
+可以从 [GitHub Releases](https://github.com/YanYuanFE/crypto-lens/releases) 下载最新 Beta DMG。当前 Beta 没有 Apple Developer ID 签名或 Apple 公证，首次启动需要在“系统设置 → 隐私与安全性”中点击“仍要打开”。请勿关闭 Gatekeeper。
+
+详细安装步骤与安全边界参见 [未公证 Beta 文档](docs/unnotarized-beta.md)。
+
 ### 环境要求
 
 - macOS 14 Sonoma 或更高版本
@@ -146,6 +152,7 @@ scripts/             # 构建、安装和验证脚本
 - [实现审计](docs/implementation-audit.md)
 - [股票代币分类 ADR](docs/adr/0001-curated-stock-token-classification.md)
 - [本地 Beta](docs/local-beta.md)
+- [未公证 Beta DMG](docs/unnotarized-beta.md)
 - [正式发布流程](docs/release.md)
 
 ## 免责声明

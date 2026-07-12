@@ -4,7 +4,7 @@ Status: **BLOCKED**
 
 This file is a release gate, not a statement that distribution is currently approved.
 
-The supported no-membership workflow is the personal Local Beta documented in `docs/local-beta.md`. This `BLOCKED` status applies to public binary distribution and does not prevent local builds or upgrades on the developer's Mac.
+The supported no-membership workflows are the personal Local Beta documented in `docs/local-beta.md` and the explicitly labeled, unnotarized GitHub prerelease documented in `docs/unnotarized-beta.md`. This `BLOCKED` status applies to a stable, Gatekeeper-approved public release and does not prevent those two separate workflows.
 
 ## Ownership
 
@@ -48,4 +48,4 @@ scripts/build_release.sh
 
 The script first requires a named Release Owner and an approved CoinMarketCap shipping/display conclusion. It then archives a universal binary, submits it for notarization, staples the app, runs strict code-signing/Gatekeeper checks, and writes the candidate ZIP to `.build/distribution/`.
 
-After the clean-machine and installed-app checks, complete the checklist, set `Status: **READY**`, then run `ruby scripts/verify_release.rb` as the final publication gate. No release artifact may be published while this document remains `BLOCKED` or any checklist item is unchecked.
+After the clean-machine and installed-app checks, complete the checklist, set `Status: **READY**`, then run `ruby scripts/verify_release.rb` as the final stable-publication gate. No artifact may be described as a stable, Developer ID, notarized, or Gatekeeper-approved release while this document remains `BLOCKED` or any checklist item is unchecked. Unnotarized prereleases must follow `docs/unnotarized-beta.md` and remain clearly separated from this lane.
