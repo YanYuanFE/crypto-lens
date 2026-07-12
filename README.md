@@ -97,6 +97,14 @@ ruby scripts/generate_xcodeproj.rb
 open CryptoLens.xcodeproj
 ```
 
+从品牌母版重新生成全部 AppIcon 尺寸：
+
+```bash
+swift scripts/generate_app_icon.swift \
+  docs/brand/app-icon-source.png \
+  CryptoLens/Resources/Assets.xcassets/AppIcon.appiconset
+```
+
 运行测试：
 
 ```bash

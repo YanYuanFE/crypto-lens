@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-0.1.0-beta.1}"
+VERSION="${1:-0.1.0-beta.2}"
 BUILD_ROOT="$ROOT/.build/unnotarized-beta"
 DERIVED_DATA="$BUILD_ROOT/DerivedData"
 BUILT_APP="$DERIVED_DATA/Build/Products/Release/CryptoLens.app"
@@ -16,7 +16,7 @@ LOCAL_REQUIREMENT='=designated => identifier "app.cryptolens"'
 IS_MOUNTED=0
 
 if [[ $# -gt 1 || ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-  echo "Usage: $0 [version, for example 0.1.0-beta.1]" >&2
+  echo "Usage: $0 [version, for example 0.1.0-beta.2]" >&2
   exit 64
 fi
 

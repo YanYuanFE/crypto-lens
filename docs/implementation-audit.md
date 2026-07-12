@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R59
+Specification: `docs/design/macos-menu-bar-app.md` R60
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -69,7 +69,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T52 | External | `build_release.sh` and strict artifact gate exist; Developer ID, notarization, stapling, Gatekeeper, and installed-app proof require release credentials |
 | T53 | Verified | About version/build is implemented; `verify_scope.rb` rejects Sparkle/updater scope |
 | T54 | External | Deployment target 14.0 and macOS 14 CI are gated; clean Sonoma-compatible launch test remains external |
-| T55 | Partial | `verify_assets.rb` validates all ten AppIcon slots; status-item visual states and installed Finder/Gatekeeper appearance remain manual/external |
+| T55 | Partial | `verify_assets.rb` validates all ten light-flat AppIcon slots generated from the canonical master; status-item visual states and installed Finder/Gatekeeper appearance remain manual/external |
 | T56 | Partial | String Catalog extraction gate covers all visible keys and stress snapshots cover long text; final live truncation/a11y review remains |
 | T57 | Verified | USD request, validation, cache-envelope, configuration, and formatter gates |
 | T58 | Verified | Tests cover CMC roots/header, candidate isolation, stored-key 401 fallback, simple-price mapping, and legacy CoinGecko slug plus long-tail symbol compatibility; scope rejects CoinGecko runtime URLs |

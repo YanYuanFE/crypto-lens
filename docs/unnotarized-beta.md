@@ -18,7 +18,7 @@ Do not instruct users to disable Gatekeeper or remove quarantine attributes glob
 ## Build
 
 ```bash
-scripts/build_unnotarized_dmg.sh 0.1.0-beta.1
+scripts/build_unnotarized_dmg.sh 0.1.0-beta.2
 ```
 
 The script:
@@ -34,7 +34,7 @@ Artifacts are written to `.build/unnotarized-beta/`.
 
 ## Publication Rules
 
-- Use a prerelease tag such as `v0.1.0-beta.1`.
+- Use a prerelease tag such as `v0.1.0-beta.2`.
 - Mark the GitHub Release as a **pre-release**.
 - Include both the DMG and its `.sha256` file.
 - State prominently that the build is not Developer ID signed or notarized.

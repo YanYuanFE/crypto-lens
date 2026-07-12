@@ -5,7 +5,7 @@
 | **文档标题** | Crypto Lens macOS Menu Bar App — Technical Design |
 | **作者** | Crypto Lens maintainers |
 | **日期** | 2026-07-09 |
-| **修订** | 2026-07-11（R59：Watchlist 更多菜单指示修正） |
+| **修订** | 2026-07-12（R60：轻扁平品牌 AppIcon） |
 | **状态** | **Implemented / Release Evidence Pending** |
 | **仓库** | `crypto-lens`（实现、测试与本地 Beta 工作流已落地） |
 | **目标平台** | **macOS 14.0+（Sonoma）**；UI 以 SwiftUI `MenuBarExtra` 为主 |
@@ -336,8 +336,8 @@ struct CryptoLensApp: App {
 **图标资产规范**：
 
 - status item 使用 SF Symbol `chart.line.uptrend.xyaxis` 的 template rendering，禁止内嵌彩色位图或文字；验证 light/dark、高对比度与菜单栏选中态。  
-- app bundle 提供自定义 `AppIcon.appiconset`，视觉语义围绕「价格镜片 / 趋势线」，不直接复用菜单栏 SF Symbol 截图；无文字，在 Finder、Gatekeeper/安全提示、ZIP/DMG 中可识别。  
-- 以 1024×1024 master 产出 Xcode 要求的 macOS icon representations；小尺寸检查轮廓清晰，不依赖细线或微小行情数字。
+- app bundle 提供自定义 `AppIcon.appiconset`，视觉语义围绕「价格镜片 / 趋势线」，不直接复用菜单栏 SF Symbol 截图；采用珍珠白背景、冰川蓝镜片与翡翠绿趋势线的轻扁平风格，无文字、黑底或 3D 材质，在 Finder、Gatekeeper/安全提示、ZIP/DMG 中可识别。
+- `docs/brand/app-icon-source.png` 是 1024×1024 canonical master；使用 `scripts/generate_app_icon.swift` 产出 Xcode 要求的 macOS icon representations。小尺寸检查轮廓清晰，不依赖细线或微小行情数字。
 
 ### 面板 open-state 与刷新生命周期（关键）
 
