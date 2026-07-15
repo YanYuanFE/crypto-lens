@@ -96,5 +96,6 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.
 - Visual stress review: Watchlist, Search, and Settings were reviewed at 320/360/380pt; long names truncate while quote, rank, and action columns remain visible.
 - Local Beta: arm64 Release build with Sparkle, ordered nested ad-hoc Hardened Runtime signatures, stable designated requirement, installation, relaunch, and in-place upgrade passed at `~/Applications/CryptoLens.app`.
+- Sparkle end-to-end: an installed build 1 fetched the published repository appcast, selected build 3, verified the EdDSA-signed DMG, and replaced the installed app with build 3.
 - Unnotarized Beta lane: the DMG builder produces an ad-hoc Hardened Runtime `arm64` + `x86_64` app, compressed image with Applications shortcut, mounted-image verification, SHA-256 sidecar, and EdDSA-signed appcast candidate; this lane remains explicitly separate from Developer ID release evidence.
 - Expected release blocks: preflight rejects the unassigned Release Owner; final evidence requires explicit `READY`; artifact verification rejects non-Developer-ID signing.
