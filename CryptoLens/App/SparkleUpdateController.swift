@@ -1,7 +1,7 @@
 import Sparkle
 
 @MainActor
-final class SparkleUpdateController: NSObject, @MainActor SPUStandardUserDriverDelegate {
+final class SparkleUpdateController: NSObject, SPUStandardUserDriverDelegate {
     private lazy var updaterController = SPUStandardUpdaterController(
         startingUpdater: true,
         updaterDelegate: nil,
@@ -13,7 +13,7 @@ final class SparkleUpdateController: NSObject, @MainActor SPUStandardUserDriverD
         _ = updaterController
     }
 
-    var supportsGentleScheduledUpdateReminders: Bool {
+    nonisolated var supportsGentleScheduledUpdateReminders: Bool {
         true
     }
 
