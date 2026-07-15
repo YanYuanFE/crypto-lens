@@ -7,10 +7,10 @@ on:
 
 jobs:
   test:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Generate Xcode project
         run: ruby scripts/generate_xcodeproj.rb
       - name: Test
