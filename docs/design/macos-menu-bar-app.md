@@ -5,7 +5,7 @@
 | **文档标题** | Crypto Lens macOS Menu Bar App — Technical Design |
 | **作者** | Crypto Lens maintainers |
 | **日期** | 2026-07-09 |
-| **修订** | 2026-07-12（R60：轻扁平品牌 AppIcon） |
+| **修订** | 2026-07-15（R61：Watchlist 整行长按拖动排序） |
 | **状态** | **Implemented / Release Evidence Pending** |
 | **仓库** | `crypto-lens`（实现、测试与本地 Beta 工作流已落地） |
 | **目标平台** | **macOS 14.0+（Sonoma）**；UI 以 SwiftUI `MenuBarExtra` 为主 |
@@ -233,10 +233,10 @@ flowchart TD
 - **批量撤销边界**：Undo 一次恢复 batch 全部 items 及其原相对顺序，并再次保存完整 snapshot；超时、关闭 panel 或退出 app 会清除 batch，removals 保持生效。首次 removal save 失败则只回滚该项且不加入 batch；Undo save 失败则整批保持 removed 并显示「无法撤销」。
 - **批量撤销状态**：每个 entry 至少保存 removed item、移除时 index、移除顺序与可选 in-memory quote；恢复时按移除顺序逆序插回并统一重建 `sortOrder`。removal 后立即从持久化 price cache prune；Undo 成功后恢复 quotes 并重新持久化，避免行短暂显示 `—`。
 - **与其他 mutation 交错**：Add 固定追加到 Watchlist 末尾，可在 Removal Batch 存活期间执行且不终止 batch；开始 reorder 前必须先 finalize batch、清除 Undo bar，再对当前 snapshot 排序。后续 removal 继续加入仍存活的 batch。
-- **Watchlist Reorder**：row 在 hover 或 keyboard focus 时显示拖拽 handle；仅从 handle 开始 drag，drop 成功后调用一次 reorder command 并保存一次，取消 drag 不改变 snapshot。无需进入 edit mode，不常驻显示上下按钮。
+- **Watchlist Reorder**：整行长按约 0.3 秒后进入拖动状态；拖过其他 row 时按最近行中心实时预览顺序，松手后调用一次 reorder command 并保存一次，未达到长按阈值或手势取消时不改变 snapshot。无需进入 edit mode，不常驻显示上下按钮。
 - **替代入口**：row context menu 提供「上移」「下移」；VoiceOver 暴露同名 accessibility actions。首项「上移」与末项「下移」disabled，所有入口每次移动一格并复用同一 command；v1 不提供 reorder 键盘快捷键。
 - **Reorder 失败**：UI 可在 drag 期间预览位置，但持久化失败必须回滚到 `lastPersistedSnapshot` 并显示「更改未保存」。
-- **Watchlist row contract**：固定高度约 **56pt**、双行、整行宽度稳定。leading 顺序为 reserved drag-handle slot → 28pt thumb → flexible identity column；trailing 为 92–112pt quote column → reserved remove slot。handle/remove 仅改变 opacity 与 hit-testing，不在 hover/focus 时插入或移除布局节点。
+- **Watchlist row contract**：固定高度约 **56pt**、双行、整行宽度稳定。leading 顺序为 28pt thumb → flexible identity column；trailing 为 92–112pt quote column → reserved action slot。长按激活后仅增加轻量 accent 背景、缩放与阴影反馈，不改变布局尺寸；remove action 仅改变 opacity 与 hit-testing，不在 hover 时插入或移除布局节点。
 - **Identity column**：第一行 `symbol + kind badge`，第二行 secondary-color `name`；两行均单行显示，超长尾部截断，identity column 允许收缩但不得把 quote column 推出 panel。
 - **Kind badge policy**：仅 `AssetKind.stockToken` 显示文字徽章「股票代币」；`crypto` 不显示徽章。徽章使用低饱和中性色，不使用涨跌红/绿，且不得仅靠颜色表达 kind；tooltip/accessibility label 同样读作「股票代币」。Search Result 使用实时 classifier kind，Watchlist row 使用 Add 时冻结的 kind。
 - **Quote column**：第一行右对齐 price，第二行右对齐带显式 `+` / `−` 的 24h change；使用 tabular/monospaced digits 防止刷新时水平跳动。涨跌颜色只是辅助信息，VoiceOver label 必须读出方向和百分比。

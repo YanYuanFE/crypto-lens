@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct RootPanelView: View {
     @Bindable var model: PanelViewModel
     var bootstrapsOnAppear = true
     @State private var confirmKeyRemoval = false
     @State private var draggedWatchlistItemID: UUID?
+    @State private var watchlistRowFrames: [UUID: CGRect] = [:]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -180,6 +180,7 @@ struct RootPanelView: View {
                                 quote: model.quotes[item.asset.assetID],
                                 isStale: model.quotes[item.asset.assetID].map(model.isStale) ?? false,
                                 isHighlighted: model.highlightedAssetID == item.asset.assetID,
+                                isReordering: draggedWatchlistItemID == item.id,
                                 canMoveUp: item.id != model.items.first?.id,
                                 canMoveDown: item.id != model.items.last?.id,
                                 moveUp: { Task { await model.move(item, by: -1) } },
@@ -187,23 +188,27 @@ struct RootPanelView: View {
                                 remove: { Task { await model.remove(item) } }
                             )
                             .id(item.asset.assetID)
-                            .onDrag {
-                                draggedWatchlistItemID = item.id
-                                return NSItemProvider(object: item.id.uuidString as NSString)
+                            .background {
+                                GeometryReader { geometry in
+                                    Color.clear.preference(
+                                        key: WatchlistRowFramePreferenceKey.self,
+                                        value: [
+                                            item.id: geometry.frame(
+                                                in: .named(WatchlistReorderCoordinateSpace.name)
+                                            )
+                                        ]
+                                    )
+                                }
                             }
-                            .onDrop(
-                                of: [UTType.text],
-                                delegate: WatchlistDropDelegate(
-                                    targetID: item.id,
-                                    draggedID: $draggedWatchlistItemID,
-                                    preview: model.previewReorder,
-                                    cancel: model.cancelReorderPreview,
-                                    commit: { Task { await model.commitReorderPreview() } }
-                                )
-                            )
+                            .simultaneousGesture(reorderGesture(for: item.id))
+                            .zIndex(draggedWatchlistItemID == item.id ? 1 : 0)
                             Divider().padding(.leading, 52)
                         }
                     }
+                }
+                .coordinateSpace(name: WatchlistReorderCoordinateSpace.name)
+                .onPreferenceChange(WatchlistRowFramePreferenceKey.self) {
+                    watchlistRowFrames = $0
                 }
                 .onChange(of: model.highlightedAssetID) { _, assetID in
                     guard let assetID else { return }
@@ -213,6 +218,44 @@ struct RootPanelView: View {
                 }
             }
         }
+    }
+
+    private func reorderGesture(for itemID: UUID) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.32, maximumDistance: 8)
+            .sequenced(
+                before: DragGesture(
+                    minimumDistance: 0,
+                    coordinateSpace: .named(WatchlistReorderCoordinateSpace.name)
+                )
+            )
+            .onChanged { value in
+                switch value {
+                case .first(true):
+                    draggedWatchlistItemID = itemID
+                case let .second(true, dragValue):
+                    guard let dragValue,
+                          draggedWatchlistItemID == itemID,
+                          let targetID = WatchlistReorderTargetResolver.targetID(
+                              atY: dragValue.location.y,
+                              rowFrames: watchlistRowFrames
+                          ),
+                          targetID != itemID else { return }
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        model.previewReorder(draggedID: itemID, over: targetID)
+                    }
+                default:
+                    break
+                }
+            }
+            .onEnded { value in
+                guard draggedWatchlistItemID == itemID else { return }
+                draggedWatchlistItemID = nil
+                if case .second(true, _) = value {
+                    Task { await model.commitReorderPreview() }
+                } else {
+                    model.cancelReorderPreview()
+                }
+            }
     }
 
     @ViewBuilder
@@ -345,6 +388,7 @@ private struct WatchlistRow: View {
     let quote: PriceQuote?
     let isStale: Bool
     let isHighlighted: Bool
+    let isReordering: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
     let moveUp: () -> Void
@@ -406,7 +450,7 @@ private struct WatchlistRow: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 56)
-        .background(isHighlighted ? Color.accentColor.opacity(0.14) : Color.clear)
+        .background(rowBackground)
         .contentShape(Rectangle())
         .onHover { isHovering = $0 }
         .contextMenu {
@@ -417,6 +461,19 @@ private struct WatchlistRow: View {
         .help(tooltip)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .scaleEffect(isReordering ? 1.012 : 1)
+        .shadow(
+            color: isReordering ? Color.black.opacity(0.16) : .clear,
+            radius: isReordering ? 5 : 0,
+            y: isReordering ? 2 : 0
+        )
+        .animation(.easeOut(duration: 0.12), value: isReordering)
+    }
+
+    private var rowBackground: Color {
+        if isReordering { return Color.accentColor.opacity(0.18) }
+        if isHighlighted { return Color.accentColor.opacity(0.14) }
+        return .clear
     }
 
     private var changeColor: Color {
@@ -450,31 +507,28 @@ private struct WatchlistRow: View {
     }
 }
 
-private struct WatchlistDropDelegate: DropDelegate {
-    let targetID: UUID
-    @Binding var draggedID: UUID?
-    let preview: (UUID, UUID) -> Void
-    let cancel: () -> Void
-    let commit: () -> Void
+private enum WatchlistReorderCoordinateSpace {
+    static let name = "watchlist-reorder"
+}
 
-    func dropEntered(info: DropInfo) {
-        guard let draggedID else { return }
-        preview(draggedID, targetID)
+private struct WatchlistRowFramePreferenceKey: PreferenceKey {
+    static let defaultValue: [UUID: CGRect] = [:]
+
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, next in next })
     }
+}
 
-    func performDrop(info: DropInfo) -> Bool {
-        guard draggedID != nil else { return false }
-        draggedID = nil
-        commit()
-        return true
-    }
-
-    func dropExited(info: DropInfo) {
-        cancel()
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
+enum WatchlistReorderTargetResolver {
+    static func targetID(atY y: CGFloat, rowFrames: [UUID: CGRect]) -> UUID? {
+        rowFrames.min { lhs, rhs in
+            let leftDistance = abs(lhs.value.midY - y)
+            let rightDistance = abs(rhs.value.midY - y)
+            if leftDistance == rightDistance {
+                return lhs.value.minY < rhs.value.minY
+            }
+            return leftDistance < rightDistance
+        }?.key
     }
 }
 

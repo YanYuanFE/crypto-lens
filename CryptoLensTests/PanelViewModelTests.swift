@@ -888,6 +888,52 @@ final class PanelViewModelTests: XCTestCase {
         XCTAssertEqual(model.items.map(\.id), initial.map(\.id))
     }
 
+    func testCommitReorderPreviewPersistsFinalOrder() async throws {
+        let service = CountingMarketService()
+        let initial = [item("a"), item("b"), item("c")]
+        let store = PanelWatchlistStore(items: initial)
+        let model = try makeModel(
+            service: service,
+            items: initial,
+            openDebounce: .milliseconds(10),
+            store: store
+        )
+        await model.bootstrap()
+
+        model.previewReorder(draggedID: initial[0].id, over: initial[2].id)
+        await model.commitReorderPreview()
+
+        let expectedIDs = [initial[1].id, initial[2].id, initial[0].id]
+        XCTAssertEqual(model.items.map(\.id), expectedIDs)
+        let persisted = try await store.load()
+        XCTAssertEqual(persisted.map(\.id), expectedIDs)
+        XCTAssertEqual(persisted.map(\.sortOrder), [0, 1, 2])
+    }
+
+    func testReorderTargetResolverChoosesNearestRowAndClampsAtEdges() {
+        let firstID = UUID()
+        let secondID = UUID()
+        let thirdID = UUID()
+        let rowFrames = [
+            firstID: CGRect(x: 0, y: 0, width: 320, height: 56),
+            secondID: CGRect(x: 0, y: 56, width: 320, height: 56),
+            thirdID: CGRect(x: 0, y: 112, width: 320, height: 56)
+        ]
+
+        XCTAssertEqual(
+            WatchlistReorderTargetResolver.targetID(atY: 90, rowFrames: rowFrames),
+            secondID
+        )
+        XCTAssertEqual(
+            WatchlistReorderTargetResolver.targetID(atY: -40, rowFrames: rowFrames),
+            firstID
+        )
+        XCTAssertEqual(
+            WatchlistReorderTargetResolver.targetID(atY: 220, rowFrames: rowFrames),
+            thirdID
+        )
+    }
+
     func testSuccessfulWatchlistSaveResolvesPersistenceFailure() async throws {
         let service = CountingMarketService()
         let model = try makeModel(

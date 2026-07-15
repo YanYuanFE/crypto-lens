@@ -1,7 +1,7 @@
 # Implementation Audit
 
-Audit date: 2026-07-11  
-Specification: `docs/design/macos-menu-bar-app.md` R60
+Audit date: 2026-07-15
+Specification: `docs/design/macos-menu-bar-app.md` R61
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -42,7 +42,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T25 | Verified | Removal save/undo-save/finalize behavior tests |
 | T26 | Verified | Multi-removal batch restores original order and quotes |
 | T27 | Verified | Interleaved Add/Undo and reorder-finalizes-batch tests |
-| T28 | Partial | Shared reorder command and persistence rollback are tested; drag/menu/VoiceOver interaction needs manual UI verification |
+| T28 | Partial | Long-press target resolution, preview cancel, single-commit persistence, shared menu command, and rollback are tested; final live drag and VoiceOver interaction need manual UI verification |
 | T29 | Partial | 320/360/380 snapshot stress coverage exists; header refresh is right-aligned and the Watchlist ellipsis hides the redundant menu indicator; final hover, tooltip, and VoiceOver review remains |
 | T30 | Verified | Boundary, scientific notation, sign, nil-change, and accessibility formatter tests |
 | T31 | Verified | Injected-clock stale timeline test proves no price polling and stop-on-close |
@@ -68,7 +68,7 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T51 | Partial | Mask/remask and candidate lifecycle tests exist; final VoiceOver/log privacy inspection remains |
 | T52 | External | `build_release.sh` and strict artifact gate exist; Developer ID, notarization, stapling, Gatekeeper, and installed-app proof require release credentials |
 | T53 | Verified | About version/build is implemented; `verify_scope.rb` rejects Sparkle/updater scope |
-| T54 | External | Deployment target 14.0 and macOS 14 CI are gated; clean Sonoma-compatible launch test remains external |
+| T54 | External | Deployment target 14.0 is gated and CI runs on macOS 15/Xcode 16.4; clean Sonoma-compatible launch test remains external |
 | T55 | Partial | `verify_assets.rb` validates all ten light-flat AppIcon slots generated from the canonical master; status-item visual states and installed Finder/Gatekeeper appearance remain manual/external |
 | T56 | Partial | String Catalog extraction gate covers all visible keys and stress snapshots cover long text; final live truncation/a11y review remains |
 | T57 | Verified | USD request, validation, cache-envelope, configuration, and formatter gates |
@@ -90,7 +90,7 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 
 ## Current Repository Evidence
 
-- XCTest: 85 passed, 0 failed, 0 skipped on macOS 26.5.1.
+- XCTest: 87 passed, 0 failed, 0 skipped on macOS 26.5.1.
 - Repository gates: 74 extracted localization keys, Apple/local/CoinMarketCap scope, and all 10 macOS AppIcon slots passed.
 - Live CMC Keyless smoke: unauthenticated `/v1/cryptocurrency/map?symbol=BTC` and `/v1/simple/price?ids=1` returned valid CMC envelopes and Bitcoin data.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.
