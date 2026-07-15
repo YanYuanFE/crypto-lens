@@ -1,0 +1,50 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>CryptoLens</title>
+        <item>
+            <title>0.1.0</title>
+            <pubDate>Wed, 15 Jul 2026 17:25:10 +0800</pubDate>
+            <link>https://github.com/YanYuanFE/crypto-lens/releases/tag/v0.1.0-beta.3</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Crypto Lens 0.1.0 Beta 3
+
+此版本为 Crypto Lens 加入 Sparkle 2 应用更新。安装 Beta 3 后，应用会每天检查一次新版本，也可以在“设置 → 关于 → 检查更新”中手动检查。更新 DMG 会经过项目 EdDSA 密钥校验后再安装。
+
+支持 Apple Silicon 和 Intel Mac，最低系统版本为 macOS 14。
+
+## 安装
+
+1. 下载 `CryptoLens-0.1.0-beta.3.dmg`。
+2. 打开 DMG，将 Crypto Lens 拖入 Applications。
+3. 首次尝试启动后，打开“系统设置 → 隐私与安全性”。
+4. 找到 Crypto Lens 的拦截提示，点击“仍要打开”，然后再次确认“打开”。
+
+此版本使用 ad-hoc 签名，**没有 Apple Developer ID 签名，也没有经过 Apple 公证**。Sparkle 的 EdDSA 校验用于确认更新包由项目发布，不能替代 Apple 的开发者身份和公证。请勿关闭 Gatekeeper。
+
+## 校验文件
+
+下载同名 `.sha256` 文件后，可在终端执行：
+
+```bash
+shasum -a 256 -c CryptoLens-0.1.0-beta.3.dmg.sha256
+```
+
+校验值以 Release 中同名 `.sha256` 文件为准。
+
+## 主要变化
+
+- 集成固定版本的 Sparkle 2.9.4。
+- 每 24 小时检查一次应用版本，安装更新前由用户确认。
+- 在设置的“关于”区域增加手动检查更新入口。
+- 更新包使用 EdDSA 签名，feed 与下载地址由仓库发布流程校验。
+- Ad-hoc Beta 对 Sparkle 的嵌套组件执行完整签名和严格验证。
+
+行情刷新策略没有改变：打开面板时更新一次，保持打开期间不自动轮询，手动刷新仍有 60 秒冷却。
+]]></description>
+            <enclosure url="https://github.com/YanYuanFE/crypto-lens/releases/download/v0.1.0-beta.3/CryptoLens-0.1.0-beta.3.dmg" length="4056738" type="application/octet-stream" sparkle:edSignature="Jt0DgvFumZbUsY6EvD2QLrbK2GgAZ7X5BqGr8mzHjRBbIDajSp49rwdx9iOK7ovwsVoWXfkPbeLQ4orewuBwBw=="/>
+        </item>
+    </channel>
+</rss>
