@@ -4,6 +4,7 @@ import SwiftUI
 struct RootPanelView: View {
     @Bindable var model: PanelViewModel
     var bootstrapsOnAppear = true
+    var checkForUpdates: () -> Void = {}
     @State private var confirmKeyRemoval = false
     @State private var draggedWatchlistItemID: UUID?
     @State private var watchlistRowFrames: [UUID: CGRect] = [:]
@@ -338,6 +339,7 @@ struct RootPanelView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("关于").font(.headline)
                     Text("Crypto Lens \(appVersion)").foregroundStyle(.secondary)
+                    Button("检查更新", systemImage: "arrow.triangle.2.circlepath", action: checkForUpdates)
                     Text("股票代币标记来自随包审核目录；行情由 CoinMarketCap 提供。")
                         .font(.caption)
                         .foregroundStyle(.secondary)

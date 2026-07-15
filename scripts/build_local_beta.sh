@@ -8,7 +8,6 @@ OUTPUT_DIR="$ROOT/.build/local-beta"
 BUILT_APP="$DERIVED_DATA/Build/Products/Release/CryptoLens.app"
 OUTPUT_APP="$OUTPUT_DIR/CryptoLens.app"
 ARCH="${CRYPTO_LENS_ARCH:-$(uname -m)}"
-LOCAL_REQUIREMENT='=designated => identifier "app.cryptolens"'
 
 case "$ARCH" in
   arm64|x86_64) ;;
@@ -32,8 +31,7 @@ xcodebuild build -quiet \
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 ditto "$BUILT_APP" "$OUTPUT_APP"
-codesign --force --deep --sign - --options runtime --requirements "$LOCAL_REQUIREMENT" "$OUTPUT_APP"
-codesign --verify --deep --strict --verbose=2 "$OUTPUT_APP"
+"$ROOT/scripts/sign_ad_hoc_app.sh" "$OUTPUT_APP"
 SIGNING_REQUIREMENT="$(codesign -d -r- "$OUTPUT_APP" 2>&1)"
 grep -q 'designated => identifier "app.cryptolens"' <<<"$SIGNING_REQUIREMENT" || {
   echo "Local Beta signing requirement is not stable" >&2
@@ -54,5 +52,6 @@ grep -q 'designated => identifier "app.cryptolens"' <<<"$SIGNING_REQUIREMENT" ||
 }
 [[ -s "$OUTPUT_APP/Contents/Resources/Assets.car" ]] || { echo "Compiled assets are missing" >&2; exit 1; }
 [[ -s "$OUTPUT_APP/Contents/Resources/CuratedStockTokens.json" ]] || { echo "Curated catalog is missing" >&2; exit 1; }
+[[ -d "$OUTPUT_APP/Contents/Frameworks/Sparkle.framework" ]] || { echo "Sparkle framework is missing" >&2; exit 1; }
 
 echo "Local Beta created at $OUTPUT_APP"

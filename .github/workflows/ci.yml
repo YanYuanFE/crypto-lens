@@ -35,4 +35,6 @@ jobs:
           scripts/install_local_beta.sh
           scripts/build_unnotarized_dmg.sh
           scripts/build_release.sh
+          scripts/generate_sparkle_appcast.sh
+          scripts/sign_ad_hoc_app.sh
           scripts/verify_release_artifact.sh

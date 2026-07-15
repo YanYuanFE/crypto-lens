@@ -24,5 +24,19 @@
     <true/>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Crypto Lens maintainers.</string>
+    <key>SUAllowsAutomaticUpdates</key>
+    <true/>
+    <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/YanYuanFE/crypto-lens/main/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>j4Pb4f886ym9R8BIAUKZ4KQMH6j2VnbN+CLKp/s8/ec=</string>
+    <key>SUScheduledCheckInterval</key>
+    <integer>86400</integer>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
 </dict>
 </plist>

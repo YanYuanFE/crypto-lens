@@ -56,6 +56,9 @@ tests_resources_phase_id = pbx_id("tests-resources-phase")
 tests_frameworks_phase_id = pbx_id("tests-frameworks-phase")
 target_proxy_id = pbx_id("tests-target-proxy")
 target_dependency_id = pbx_id("tests-target-dependency")
+sparkle_package_id = pbx_id("package:sparkle")
+sparkle_product_id = pbx_id("package-product:sparkle")
+sparkle_build_file_id = pbx_id("package-build-file:sparkle")
 
 file_refs = all_files.to_h { |path| [path, pbx_id("file-ref:#{path}")] }
 build_files = (app_sources + test_sources + resources).to_h do |path|
@@ -85,6 +88,7 @@ lines << "\n/* Begin PBXBuildFile section */"
   phase = resources.include?(path) ? "Resources" : "Sources"
   lines << "\t\t#{build_files.fetch(path)} /* #{File.basename(path)} in #{phase} */ = {isa = PBXBuildFile; fileRef = #{file_refs.fetch(path)} /* #{File.basename(path)} */; };"
 end
+lines << "\t\t#{sparkle_build_file_id} /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = #{sparkle_product_id} /* Sparkle */; };"
 lines << "/* End PBXBuildFile section */\n"
 
 lines << "/* Begin PBXContainerItemProxy section */"
@@ -105,9 +109,9 @@ lines << "\t\t#{app_product_id} /* CryptoLens.app */ = {isa = PBXFileReference; 
 lines << "\t\t#{tests_product_id} /* CryptoLensTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CryptoLensTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };"
 lines << "/* End PBXFileReference section */\n"
 
-[[app_frameworks_phase_id, "Frameworks"], [tests_frameworks_phase_id, "Frameworks"]].each do |phase_id, name|
+[[app_frameworks_phase_id, ["#{sparkle_build_file_id} /* Sparkle in Frameworks */"]], [tests_frameworks_phase_id, []]].each do |phase_id, files|
   lines << "/* Begin PBXFrameworksBuildPhase section */" if phase_id == app_frameworks_phase_id
-  lines << "\t\t#{phase_id} /* #{name} */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };"
+  lines << "\t\t#{phase_id} /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (#{files.join(', ')}); runOnlyForDeploymentPostprocessing = 0; };"
 end
 lines << "/* End PBXFrameworksBuildPhase section */\n"
 
@@ -121,12 +125,12 @@ lines << "\t\t#{products_group_id} /* Products */ = {isa = PBXGroup; children = 
 lines << "/* End PBXGroup section */\n"
 
 lines << "/* Begin PBXNativeTarget section */"
-lines << "\t\t#{app_target_id} /* CryptoLens */ = {isa = PBXNativeTarget; buildConfigurationList = #{app_config_list_id}; buildPhases = (#{app_sources_phase_id}, #{app_frameworks_phase_id}, #{app_resources_phase_id}); buildRules = (); dependencies = (); name = CryptoLens; productName = CryptoLens; productReference = #{app_product_id}; productType = \"com.apple.product-type.application\"; };"
+lines << "\t\t#{app_target_id} /* CryptoLens */ = {isa = PBXNativeTarget; buildConfigurationList = #{app_config_list_id}; buildPhases = (#{app_sources_phase_id}, #{app_frameworks_phase_id}, #{app_resources_phase_id}); buildRules = (); dependencies = (); name = CryptoLens; packageProductDependencies = (#{sparkle_product_id} /* Sparkle */); productName = CryptoLens; productReference = #{app_product_id}; productType = \"com.apple.product-type.application\"; };"
 lines << "\t\t#{tests_target_id} /* CryptoLensTests */ = {isa = PBXNativeTarget; buildConfigurationList = #{tests_config_list_id}; buildPhases = (#{tests_sources_phase_id}, #{tests_frameworks_phase_id}, #{tests_resources_phase_id}); buildRules = (); dependencies = (#{target_dependency_id}); name = CryptoLensTests; productName = CryptoLensTests; productReference = #{tests_product_id}; productType = \"com.apple.product-type.bundle.unit-test\"; };"
 lines << "/* End PBXNativeTarget section */\n"
 
 lines << "/* Begin PBXProject section */"
-lines << "\t\t#{project_id} /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2660; LastUpgradeCheck = 2660; TargetAttributes = {#{app_target_id} = {CreatedOnToolsVersion = 26.0; }; #{tests_target_id} = {CreatedOnToolsVersion = 26.0; TestTargetID = #{app_target_id}; }; }; }; buildConfigurationList = #{project_config_list_id}; compatibilityVersion = \"Xcode 15.0\"; developmentRegion = zh-Hans; hasScannedForEncodings = 0; knownRegions = (zh-Hans, Base); mainGroup = #{main_group_id}; productRefGroup = #{products_group_id}; projectDirPath = \"\"; projectRoot = \"\"; targets = (#{app_target_id}, #{tests_target_id}); };"
+lines << "\t\t#{project_id} /* Project object */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2660; LastUpgradeCheck = 2660; TargetAttributes = {#{app_target_id} = {CreatedOnToolsVersion = 26.0; }; #{tests_target_id} = {CreatedOnToolsVersion = 26.0; TestTargetID = #{app_target_id}; }; }; }; buildConfigurationList = #{project_config_list_id}; compatibilityVersion = \"Xcode 15.0\"; developmentRegion = zh-Hans; hasScannedForEncodings = 0; knownRegions = (zh-Hans, Base); mainGroup = #{main_group_id}; packageReferences = (#{sparkle_package_id} /* XCRemoteSwiftPackageReference \"Sparkle\" */); productRefGroup = #{products_group_id}; projectDirPath = \"\"; projectRoot = \"\"; targets = (#{app_target_id}, #{tests_target_id}); };"
 lines << "/* End PBXProject section */\n"
 
 [[app_resources_phase_id, resources], [tests_resources_phase_id, []]].each_with_index do |(phase_id, paths), index|
@@ -201,6 +205,14 @@ lines << "\t\t#{project_config_list_id} /* Build configuration list for PBXProje
 lines << "\t\t#{app_config_list_id} /* Build configuration list for PBXNativeTarget CryptoLens */ = {isa = XCConfigurationList; buildConfigurations = (#{app_debug_id}, #{app_release_id}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };"
 lines << "\t\t#{tests_config_list_id} /* Build configuration list for PBXNativeTarget CryptoLensTests */ = {isa = XCConfigurationList; buildConfigurations = (#{tests_debug_id}, #{tests_release_id}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };"
 lines << "/* End XCConfigurationList section */\n"
+
+lines << "/* Begin XCRemoteSwiftPackageReference section */"
+lines << "\t\t#{sparkle_package_id} /* XCRemoteSwiftPackageReference \"Sparkle\" */ = {isa = XCRemoteSwiftPackageReference; repositoryURL = \"https://github.com/sparkle-project/Sparkle\"; requirement = {kind = exactVersion; version = 2.9.4; }; };"
+lines << "/* End XCRemoteSwiftPackageReference section */\n"
+
+lines << "/* Begin XCSwiftPackageProductDependency section */"
+lines << "\t\t#{sparkle_product_id} /* Sparkle */ = {isa = XCSwiftPackageProductDependency; package = #{sparkle_package_id} /* XCRemoteSwiftPackageReference \"Sparkle\" */; productName = Sparkle; };"
+lines << "/* End XCSwiftPackageProductDependency section */\n"
 
 lines << "\t};"
 lines << "\trootObject = #{project_id} /* Project object */;"

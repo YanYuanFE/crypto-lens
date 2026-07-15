@@ -21,6 +21,7 @@
 - 打开面板时更新一次，保持打开期间不自动轮询；手动刷新有 60 秒冷却时间。
 - 缓存最后一次成功行情，断网或请求失败时仍可查看历史价格。
 - 无需账号和 API Key；也可配置个人 CoinMarketCap API Key 获得独立请求额度。
+- 通过 Sparkle 2 检查并安装后续版本，更新包使用项目 EdDSA 密钥校验。
 
 > 股票代币的搜索和价格仍来自 CoinMarketCap。应用内置目录只用于识别资产类型，不代表官方认证、证券推荐或投资背书。
 
@@ -31,6 +32,8 @@
 可以从 [GitHub Releases](https://github.com/YanYuanFE/crypto-lens/releases) 下载最新 Beta DMG。当前 Beta 没有 Apple Developer ID 签名或 Apple 公证，首次启动需要在“系统设置 → 隐私与安全性”中点击“仍要打开”。请勿关闭 Gatekeeper。
 
 详细安装步骤与安全边界参见 [未公证 Beta 文档](docs/unnotarized-beta.md)。
+
+从 Beta 3 开始，应用会每天检查一次新版本，也可在“设置 → 关于 → 检查更新”中手动检查。首次仍需手动安装带 Sparkle 的 Beta 3；后续更新不会消除未公证版本首次运行时的 macOS 安全提示。
 
 ### 环境要求
 
@@ -125,7 +128,7 @@ ruby scripts/verify_assets.rb
 ruby scripts/verify_localizations.rb .build/DerivedData
 ```
 
-项目不依赖第三方 Swift Package，运行时仅使用 Apple SDK Frameworks。
+项目仅引入一个第三方 Swift Package：固定版本的 [Sparkle 2](https://github.com/sparkle-project/Sparkle)，用于应用更新。行情、存储与测试仍使用 Apple SDK、XCTest 和 URLProtocol。
 
 ## 项目结构
 
@@ -152,7 +155,7 @@ scripts/             # 构建、安装和验证脚本
 
 ## 分发状态
 
-当前仓库提供的是源码和个人本地 Beta 构建流程。由于项目尚未使用 Developer ID 签名和 Apple 公证，不应把本地构建的 `.app` 当作面向公众的正式安装包分发。正式发布要求与检查项参见 [发布文档](docs/release.md)。
+当前仓库提供源码、个人本地构建和明确标记为未公证的 GitHub Beta。由于项目尚未使用 Developer ID 签名和 Apple 公证，Beta 不能描述为 Gatekeeper 已认可的正式版本。Sparkle 负责版本发现、EdDSA 校验与替换应用，不会绕过 macOS 的安全策略。正式发布要求与检查项参见 [发布文档](docs/release.md)。
 
 ## 文档
 

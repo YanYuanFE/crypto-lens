@@ -18,7 +18,7 @@ Do not instruct users to disable Gatekeeper or remove quarantine attributes glob
 ## Build
 
 ```bash
-scripts/build_unnotarized_dmg.sh 0.1.0-beta.2
+scripts/build_unnotarized_dmg.sh 0.1.0-beta.3
 ```
 
 The script:
@@ -28,13 +28,28 @@ The script:
 - applies an ad-hoc Hardened Runtime signature with a stable local requirement;
 - creates a compressed DMG containing the app and an Applications shortcut;
 - mounts the completed DMG and verifies its app, signature, and architectures;
-- writes a SHA-256 checksum next to the DMG.
+- writes a SHA-256 checksum next to the DMG;
+- signs the update enclosure with the Sparkle EdDSA key in the maintainer's login Keychain and produces an appcast candidate.
 
-Artifacts are written to `.build/unnotarized-beta/`.
+Artifacts are written to `.build/unnotarized-beta/`. The generated `appcast.xml` is a candidate only and must not be copied to the repository yet.
+
+## Sparkle Publication Order
+
+The first Sparkle-enabled build is a bootstrap release: users install Beta 3 manually, then Sparkle can deliver later versions. Sparkle's EdDSA key verifies the downloaded DMG independently of Apple code signing; it does not provide a Developer ID identity or notarization.
+
+Publish each update in this order:
+
+1. Commit and push the code used to build the version.
+2. Create the matching GitHub prerelease and upload the DMG plus checksum.
+3. Confirm the release asset URL is reachable.
+4. Copy `.build/unnotarized-beta/appcast.xml` to the repository root, commit, and push it.
+5. Check for updates from an older installed build and verify Sparkle reports the new version.
+
+The EdDSA private key is stored only in the maintainer's login Keychain by Sparkle's `generate_keys` tool. Never export it into the repository or CI secrets unless the release process is deliberately migrated to a protected signing runner.
 
 ## Publication Rules
 
-- Use a prerelease tag such as `v0.1.0-beta.2`.
+- Use a prerelease tag such as `v0.1.0-beta.3`.
 - Mark the GitHub Release as a **pre-release**.
 - Include both the DMG and its `.sha256` file.
 - State prominently that the build is not Developer ID signed or notarized.

@@ -1,7 +1,7 @@
 # Implementation Audit
 
 Audit date: 2026-07-15
-Specification: `docs/design/macos-menu-bar-app.md` R61
+Specification: `docs/design/macos-menu-bar-app.md` R62
 Scope note: all keyboard behavior, including T34 and T35, is deferred by product decision and is not a v1 release blocker.
 
 ## Status Legend
@@ -67,20 +67,20 @@ Scope note: all keyboard behavior, including T34 and T35, is deferred by product
 | T50 | Verified | Local-drain success and configurable 2-second timeout termination tests |
 | T51 | Partial | Mask/remask and candidate lifecycle tests exist; final VoiceOver/log privacy inspection remains |
 | T52 | External | `build_release.sh` and strict artifact gate exist; Developer ID, notarization, stapling, Gatekeeper, and installed-app proof require release credentials |
-| T53 | Verified | About version/build is implemented; `verify_scope.rb` rejects Sparkle/updater scope |
+| T53 | Verified | About exposes manual update checking; Info.plist contract test and scope gate verify daily Sparkle checks, feed URL, EdDSA public key, and install-confirmation defaults |
 | T54 | External | Deployment target 14.0 is gated and CI runs on macOS 15/Xcode 16.4; clean Sonoma-compatible launch test remains external |
 | T55 | Partial | `verify_assets.rb` validates all ten light-flat AppIcon slots generated from the canonical master; status-item visual states and installed Finder/Gatekeeper appearance remain manual/external |
 | T56 | Partial | String Catalog extraction gate covers all visible keys and stress snapshots cover long text; final live truncation/a11y review remains |
 | T57 | Verified | USD request, validation, cache-envelope, configuration, and formatter gates |
 | T58 | Verified | Tests cover CMC roots/header, candidate isolation, stored-key 401 fallback, simple-price mapping, and legacy CoinGecko slug plus long-tail symbol compatibility; scope rejects CoinGecko runtime URLs |
 | T59 | Partial | Single icon-only `MenuBarExtra` is scope-gated; final status-item accessibility/selected-state check remains manual |
-| T60 | Verified | `verify_scope.rb` rejects notifications and background-task APIs/entitlements |
+| T60 | Verified | `verify_scope.rb` rejects notifications and background-task APIs/entitlements; Sparkle version checks are independent of price polling and alert scope |
 | T61 | Verified | Local Application Support stores plus CloudKit/iCloud negative scope gate |
 | T62 | External | `verify_release.rb` intentionally blocks while Release Owner and CoinMarketCap shipping/display conclusion are missing |
 | T63 | Partial | About copy and HTTPS source links are implemented; installed external-link behavior needs manual verification |
 | T64 | Verified | `verify_scope.rb` requires exactly one `MenuBarExtra`; no Settings scene exists |
 | T65 | Verified | `verify_scope.rb` rejects `SMAppService`; no login-item UI, entitlement, helper, or model exists |
-| T66 | Verified | Scope gate rejects package references/`Package.resolved`; runtime uses Apple SDK and tests use XCTest/URLProtocol |
+| T66 | Verified | Scope gate allows only Sparkle, pins exact version 2.9.4, and validates the committed `Package.resolved`; tests use XCTest/URLProtocol |
 
 ## Release Boundary
 
@@ -90,11 +90,11 @@ Personal use follows `docs/local-beta.md`: an ad-hoc signed Release build may be
 
 ## Current Repository Evidence
 
-- XCTest: 87 passed, 0 failed, 0 skipped on macOS 26.5.1.
-- Repository gates: 74 extracted localization keys, Apple/local/CoinMarketCap scope, and all 10 macOS AppIcon slots passed.
+- XCTest: 88 passed, 0 failed, 0 skipped on macOS 26.5.1.
+- Repository gates: 75 extracted localization keys, local/CoinMarketCap scope, pinned Sparkle update configuration, and all 10 macOS AppIcon slots passed.
 - Live CMC Keyless smoke: unauthenticated `/v1/cryptocurrency/map?symbol=BTC` and `/v1/simple/price?ids=1` returned valid CMC envelopes and Bitcoin data.
 - Release structure: unsigned local build succeeded as a universal `arm64` + `x86_64` app with deployment target 14.0, `LSUIElement=true`, compiled assets, and the curated catalog.
 - Visual stress review: Watchlist, Search, and Settings were reviewed at 320/360/380pt; long names truncate while quote, rank, and action columns remain visible.
-- Local Beta: arm64 Release build, ad-hoc Hardened Runtime signature, stable designated requirement, installation, relaunch, and in-place upgrade passed at `~/Applications/CryptoLens.app`.
-- Unnotarized Beta lane: the DMG builder produces an ad-hoc Hardened Runtime `arm64` + `x86_64` app, compressed image with Applications shortcut, mounted-image verification, and SHA-256 sidecar; this lane remains explicitly separate from Developer ID release evidence.
+- Local Beta: arm64 Release build with Sparkle, ordered nested ad-hoc Hardened Runtime signatures, stable designated requirement, installation, relaunch, and in-place upgrade passed at `~/Applications/CryptoLens.app`.
+- Unnotarized Beta lane: the DMG builder produces an ad-hoc Hardened Runtime `arm64` + `x86_64` app, compressed image with Applications shortcut, mounted-image verification, SHA-256 sidecar, and EdDSA-signed appcast candidate; this lane remains explicitly separate from Developer ID release evidence.
 - Expected release blocks: preflight rejects the unassigned Release Owner; final evidence requires explicit `READY`; artifact verification rejects non-Developer-ID signing.

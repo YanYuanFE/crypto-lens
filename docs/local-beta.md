@@ -15,7 +15,7 @@ Crypto Lens can be built and used on the current Mac without Apple Developer Pro
 scripts/build_local_beta.sh
 ```
 
-The script runs the scope and icon gates, creates a Release build for the current Mac architecture, and applies an ad-hoc Hardened Runtime signature with a stable local designated requirement. The resulting app is written to:
+The script runs the scope and icon gates, creates a Release build for the current Mac architecture, embeds the pinned Sparkle framework, and applies an ad-hoc Hardened Runtime signature with a stable local designated requirement. Because Sparkle contains nested executables, the ad-hoc lane signs them in dependency order and grants only the main app the library-validation exception required for this unsigned local workflow. The resulting app is written to:
 
 ```text
 .build/local-beta/CryptoLens.app
@@ -30,6 +30,8 @@ scripts/install_local_beta.sh
 The app is installed to `~/Applications/CryptoLens.app` and launched. Running the same command upgrades the existing local installation. The installer asks the running app to quit, verifies the replacement, and swaps the bundle atomically. Watchlist/cache data in Application Support and the CoinMarketCap API Key in Keychain are preserved; the stable local signing requirement prevents each rebuild from receiving a new cdhash-only identity.
 
 The first migration from an older Xcode or cdhash-only ad-hoc build may require one Keychain approval or re-entry of an optional CoinMarketCap API Key. Subsequent builds made by this Local Beta workflow keep the same designated requirement.
+
+Local builds can use **Settings → About → Check for Updates**, but an update is available only after a matching GitHub prerelease asset and signed `appcast.xml` entry have both been published. The Sparkle EdDSA private key remains in the maintainer's login Keychain and is never stored in the repository.
 
 Available options:
 

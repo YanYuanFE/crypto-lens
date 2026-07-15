@@ -15,6 +15,24 @@ final class DomainContractTests: XCTestCase {
         XCTAssertEqual(configuration.maxWatchlistCount, 50)
     }
 
+    func testSparkleConfigurationMatchesTheUpdateContract() {
+        let info = Bundle.main.infoDictionary
+
+        XCTAssertEqual(
+            info?["SUFeedURL"] as? String,
+            "https://raw.githubusercontent.com/YanYuanFE/crypto-lens/main/appcast.xml"
+        )
+        XCTAssertEqual(
+            info?["SUPublicEDKey"] as? String,
+            "j4Pb4f886ym9R8BIAUKZ4KQMH6j2VnbN+CLKp/s8/ec="
+        )
+        XCTAssertEqual(info?["SUEnableAutomaticChecks"] as? Bool, true)
+        XCTAssertEqual(info?["SUAllowsAutomaticUpdates"] as? Bool, true)
+        XCTAssertEqual(info?["SUAutomaticallyUpdate"] as? Bool, false)
+        XCTAssertEqual(info?["SUScheduledCheckInterval"] as? Int, 86_400)
+        XCTAssertEqual(info?["SUVerifyUpdateBeforeExtraction"] as? Bool, true)
+    }
+
     func testAssetIDRoundTripsThroughJSON() throws {
         let original = AssetID(rawValue: "bitcoin", source: .coinGecko)
 
